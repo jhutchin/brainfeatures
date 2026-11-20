@@ -15,6 +15,21 @@ from nilearn import datasets, surface
 
 OUT = Path(__file__).resolve().parent.parent / "web" / "brain.js"
 
+# FreeSurfer's license (Part B 1(b), 1(d)) asks that every copy carry its
+# terms with this preface and that modified data be marked as modified.
+NOTICE = """/* MODIFIED data derived from FreeSurfer (fsaverage5 surfaces, sulcal depth,
+ * Destrieux aparc.a2009s labels): converted to binary arrays, sulcal depth
+ * rescaled and quantized to 8 bits. Not the original FreeSurfer files.
+ *
+ * All or portions of this licensed product (such portions are the
+ * "Software") have been obtained under license from The General Hospital
+ * Corporation "MGH" and are subject to the following terms and conditions:
+ * the FreeSurfer Software License Agreement, Version 1.0 (February 2011),
+ * reproduced in full in licenses/FreeSurfer.txt, served beside this file
+ * as FreeSurfer-license.txt.
+ */
+"""
+
 
 def b64(array):
     return base64.b64encode(np.ascontiguousarray(array).tobytes()).decode("ascii")
@@ -49,7 +64,7 @@ def main():
         "hemis": hemis,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text("window.BRAIN_DATA = " + json.dumps(payload, separators=(",", ":")) + ";\n")
+    OUT.write_text(NOTICE + "window.BRAIN_DATA = " + json.dumps(payload, separators=(",", ":")) + ";\n")
     print(f"wrote {OUT} ({OUT.stat().st_size / 1e6:.2f} MB)")
 
 

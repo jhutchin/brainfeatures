@@ -20,12 +20,15 @@ Module 1 (mapping a variable) is built. Planned next:
 ```sh
 uv run --no-project --with nilearn python build/build_brain.py   # regenerate web/brain.js
 node tests/test_sim.js
+python3 build/make_site.py _site                                  # static site; serve _site/ to view locally
 ```
 
-## Sources
+Every push to `main` runs the tests and deploys the site to GitHub Pages (`.github/workflows/pages.yml`).
 
-- Surface: FreeSurfer fsaverage5, as shipped with nilearn.
-- Atlas: Destrieux et al. (2010), fetched by nilearn.
+## License and sources
+
+- Code and text: MIT, in `LICENSE`.
+- `web/brain.js` holds modified FreeSurfer data under the FreeSurfer Software License; see `licenses/FreeSurfer.txt` for what was changed and the full terms. This covers:
+  - the fsaverage5 surfaces, obtained through nilearn;
+  - the Destrieux et al. (2010) parcellation, fetched by nilearn.
 - Rendering: three.js r128 from cdnjs.
-
-Check the FreeSurfer and atlas terms before a public release.
