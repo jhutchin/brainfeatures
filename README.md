@@ -32,3 +32,4 @@ Every push to `main` runs the tests and deploys the site to GitHub Pages (`.gith
   - the fsaverage5 surfaces, obtained through nilearn;
   - the Destrieux et al. (2010) parcellation, fetched by nilearn.
 - Rendering: three.js r128 from cdnjs.
+- Stimuli: every film, image and subtitle file the series uses is listed in `stimuli/manifest.tsv` with its source, checksum, licence and the attribution the pages must show. Media files are not stored in this repo.
