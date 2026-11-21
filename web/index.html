@@ -63,11 +63,19 @@
     background: var(--warn-bg); color: var(--warn-ink); padding: 2px 8px; border-radius: 4px;
   }
   .lede { margin: 0; max-width: 68ch; color: var(--ink-2); }
-  nav.modules { display: flex; flex-wrap: wrap; gap: 6px; }
-  nav.modules span {
+  nav.series { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.series a, nav.series span {
+    font-size: 0.85rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3); text-decoration: none;
+  }
+  nav.series a { color: var(--ink-2); }
+  nav.series a:hover { border-color: var(--accent); }
+  nav.series .current { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  nav.modules { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  nav.modules .mlab { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 2px; }
+  nav.modules span:not(.mlab) {
     font-size: 0.85rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3);
   }
-  nav.modules span.current { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  nav.modules span.current { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }
 
   .bench { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 18px; align-items: start; }
   .side { display: grid; gap: 14px; min-width: 0; }
@@ -186,8 +194,14 @@
       <span class="sim-badge">Simulated data</span>
     </div>
     <p class="lede">Every response on this page comes from a brain we made up. We decided where each feature of a stimulus drives activity, then ran a fake fMRI experiment and analysed it the way a real study would. Because we know the answer, you can check whether the analysis finds it.</p>
-    <p class="lede" style="font-size:0.9rem">Page 3 of a series. Start with <a href="features.html" style="color:var(--accent)">page 1, What a feature is</a>. The features simulated here are measured on a real film on <a href="film.html" style="color:var(--accent)">page 2, Features over time</a>.</p>
-    <nav class="modules" aria-label="Modules">
+    <nav class="series" aria-label="Pages in this series">
+      <a href="features.html">1 · What a feature is</a>
+      <a href="film.html">2 · Features over time</a>
+      <span class="current" aria-current="page">3 · Synthetic Cortex</span>
+    </nav>
+    <p class="lede" style="font-size:0.9rem">The features simulated here are measured on a real film on <a href="film.html" style="color:var(--accent)">page 2, Features over time</a>.</p>
+    <nav class="modules" aria-label="Modules of this page">
+      <span class="mlab">Modules</span>
       <span class="current">1 · Mapping a variable</span>
       <span>2 · From sensory to abstract (next)</span>
       <span>3 · Comparing representations (next)</span>
