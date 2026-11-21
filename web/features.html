@@ -1,0 +1,1103 @@
+<title>What a Feature Is</title>
+<meta name="description" content="Compute features of real, openly licensed pictures and sounds in your browser, then compare them with the features trained models compute.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: one reading column of five steps. Every step works on the same
+     picked picture, so a pick in any step carries to the others. */
+  :root {
+    --bg: #f3f5f6;
+    --panel: #ffffff;
+    --ink: #121619;
+    --ink-2: #49525a;
+    --ink-3: #737c85;
+    --line: #dce1e5;
+    --grid: #edf0f2;
+    --accent: #0b6e69;
+    --accent-soft: #d6ece9;
+    --on-accent: #ffffff;
+    --face: #2a78d6;
+    --place: #eb6834;
+    --object: #1baf7a;
+    --seq-lo: #cde2fb;
+    --seq-hi: #0d366b;
+    --spec: #2a6fc9;
+    --warn-bg: #fff4d6;
+    --warn-ink: #6b4a00;
+    --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111416; --panel: #191d20; --ink: #eef1f3; --ink-2: #b3bbc2; --ink-3: #848d95;
+      --line: #2b3237; --grid: #22282c; --accent: #47b8ad; --accent-soft: #173734; --on-accent: #0b1514;
+      --face: #3987e5; --place: #d95926; --object: #199e70;
+      --seq-lo: #1c2a3a; --seq-hi: #9ec5f4; --spec: #6aa8f2;
+      --warn-bg: #3a2f12; --warn-ink: #f3d68a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111416; --panel: #191d20; --ink: #eef1f3; --ink-2: #b3bbc2; --ink-3: #848d95;
+    --line: #2b3237; --grid: #22282c; --accent: #47b8ad; --accent-soft: #173734; --on-accent: #0b1514;
+    --face: #3987e5; --place: #d95926; --object: #199e70;
+    --seq-lo: #1c2a3a; --seq-hi: #9ec5f4; --spec: #6aa8f2;
+    --warn-bg: #3a2f12; --warn-ink: #f3d68a;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--font-body);
+    font-size: 15px; line-height: 1.5; margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 40px;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); }
+
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 18px; }
+  header.top { display: grid; gap: 10px; }
+  .brandline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.01em; }
+  .badge {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--accent-soft); color: var(--ink); padding: 2px 8px; border-radius: 4px;
+  }
+  .lede { margin: 0; max-width: 72ch; color: var(--ink-2); }
+  nav.series { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.series a, nav.series span {
+    font-size: 0.85rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3); text-decoration: none;
+  }
+  nav.series a { color: var(--ink-2); }
+  nav.series a:hover { border-color: var(--accent); }
+  nav.series .current { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; min-width: 0; }
+  .stephead { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; margin-bottom: 12px; }
+  .stephead .n {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent);
+    font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600;
+  }
+  .stephead h2 { font-size: 1.15rem; font-weight: 700; }
+  .stephead p { margin: 4px 0 0; color: var(--ink-2); max-width: 78ch; }
+  .prose { color: var(--ink-2); max-width: 78ch; font-size: 0.93rem; }
+  .prose p { margin: 0 0 8px; }
+  .prose b { color: var(--ink); }
+  .hint { font-size: 0.8rem; color: var(--ink-3); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .two.side { grid-template-columns: minmax(0, 220px) minmax(0, 1fr); }
+  .sub { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 0 0 8px; }
+
+  /* controls */
+  select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { border: 0; background: none; padding: 5px 10px; cursor: pointer; font-size: 0.86rem; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 6px 10px; cursor: pointer; font-size: 0.86rem; }
+  .btn:hover { border-color: var(--accent); }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .ctl { display: grid; gap: 4px; }
+  .ctl label { font-size: 0.86rem; color: var(--ink-2); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  /* picker */
+  .thumbs { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; margin-top: 8px; }
+  .thumbs button {
+    aspect-ratio: 1 / 1; border: 2px solid transparent; border-radius: 4px; padding: 0; cursor: pointer;
+    background-color: var(--grid); background-repeat: no-repeat;
+  }
+  .thumbs button[hidden] { display: none; }
+  .thumbs button:hover { border-color: var(--ink-3); }
+  .thumbs button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .viewer canvas { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; background: var(--grid); border-radius: 6px; }
+  .credit { font-size: 0.78rem; color: var(--ink-3); margin: 6px 0 0; overflow-wrap: anywhere; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.84rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .key { width: 12px; height: 12px; display: inline-block; }
+  .key.face { background: var(--face); border-radius: 50%; }
+  .key.place { background: var(--place); }
+  .key.object { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid var(--object); }
+
+  /* hand-feature cards */
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+  .card[data-on="true"] { border-color: var(--accent); }
+  .card h3 { font-size: 0.95rem; }
+  .card .how { font-size: 0.8rem; color: var(--ink-2); }
+  .card .val { font-family: var(--font-mono); font-size: 1.35rem; font-weight: 600; }
+  .card .cmp { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-3); }
+  .card button { justify-self: start; }
+
+  /* figures */
+  .figure { position: relative; }
+  .figure canvas { display: block; width: 100%; touch-action: pan-y; }
+  .sq canvas { aspect-ratio: 1 / 1; max-height: 520px; cursor: crosshair; }
+  .verdict { border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--accent-soft); border-radius: 0 6px 6px 0; font-size: 0.92rem; }
+  .verdict b { font-family: var(--font-mono); }
+  .notice { background: var(--warn-bg); color: var(--warn-ink); padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; }
+  .tip {
+    position: fixed; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-mono);
+    font-size: 0.76rem; padding: 5px 8px; border-radius: 6px; z-index: 5; max-width: min(320px, 80vw);
+  }
+
+  /* sound */
+  .scope canvas { display: block; width: 100%; height: 150px; border-radius: 6px; background: var(--grid); }
+  .scope .lines canvas { height: 90px; margin-top: 6px; }
+  .readout { display: flex; flex-wrap: wrap; gap: 6px 20px; font-family: var(--font-mono); font-size: 0.9rem; margin-top: 8px; }
+  .readout span b { font-weight: 600; }
+  .subs { font-size: 0.88rem; color: var(--ink-2); margin: 6px 0 0; min-height: 1.4em; }
+
+  /* learned */
+  .learned { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .lcard { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+  .lcard h3 { font-size: 0.9rem; }
+  .lcard .lv { font-size: 0.95rem; color: var(--ink); overflow-wrap: anywhere; }
+  .lcard .lv.big { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 600; }
+  .lcard .lm { font-size: 0.74rem; color: var(--ink-3); }
+  .bars { display: grid; gap: 3px; }
+  .bar { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 6px; align-items: center; font-size: 0.84rem; }
+  .bar .bl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .bt { height: 6px; border-radius: 3px; background: var(--grid); grid-column: 1 / -1; }
+  .bar .bt i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .bar .bn { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-2); text-align: right; }
+  .caption-card { grid-column: 1 / -1; }
+  .caption-card .lv { font-size: 1.05rem; }
+
+  /* embeddings */
+  .nn { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .nn button { width: 56px; height: 56px; border-radius: 4px; border: 2px solid transparent; padding: 0; cursor: pointer; background-repeat: no-repeat; }
+  .nn button:hover { border-color: var(--accent); }
+  .ladder { display: grid; gap: 6px; margin-top: 4px; }
+  .rung { display: grid; grid-template-columns: 170px minmax(0, 1fr) 52px; gap: 10px; align-items: center; font-size: 0.86rem; cursor: pointer; border-radius: 6px; padding: 2px 4px; }
+  .rung:hover { background: var(--accent-soft); }
+  .rung[aria-current="true"] { background: var(--accent-soft); }
+  .rung .track { position: relative; height: 12px; }
+  .rung .fill { position: absolute; left: 0; top: 2px; height: 8px; border-radius: 0 4px 4px 0; background: var(--accent); }
+  .rung .chance { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 2px dashed var(--ink-3); }
+  .rung .pct { font-family: var(--font-mono); text-align: right; }
+
+  footer.about { max-width: 1120px; margin: 8px auto 0; color: var(--ink-3); font-size: 0.86rem; display: grid; gap: 8px; }
+  footer.about p { margin: 0; max-width: 90ch; }
+  details.credits summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+  .tablewrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; font-size: 0.8rem; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-2); font-weight: 600; }
+  td { color: var(--ink-2); }
+  td:first-child { font-family: var(--font-mono); color: var(--ink); white-space: nowrap; }
+
+  @media (max-width: 860px) {
+    .two, .two.side { grid-template-columns: minmax(0, 1fr); }
+    #mini { max-width: 220px; }
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 520px) {
+    .thumbs { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+    .rung { grid-template-columns: 110px minmax(0, 1fr) 44px; font-size: 0.8rem; }
+    .panel { padding: 14px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brandline">
+      <h1>What a feature is</h1>
+      <span class="badge">Real pictures · features you compute</span>
+    </div>
+    <p class="lede">A <b>feature</b> is a number computed from a stimulus: how bright a picture is, how loud a sound is, how many faces a photo holds. You'll compute some features yourself in this page, then compare them with features that trained models compute. Neuroscientists use numbers like these to ask which properties of a stimulus a brain region responds to.</p>
+    <nav class="series" aria-label="Pages in this series">
+      <span class="current" aria-current="page">1 · What a feature is</span>
+      <a href="film.html">2 · Features over time</a>
+      <a href="index.html">3 · Synthetic Cortex</a>
+    </nav>
+  </header>
+
+  <div class="notice" id="nodata" hidden>The picture data did not load. If you are running the site locally, fetch the media first (see the README).</div>
+
+  <!-- 1 -->
+  <section class="panel" id="s1" aria-labelledby="h1s">
+    <div class="stephead"><span class="n">1</span><div>
+      <h2 id="h1s">Compute four features yourself</h2>
+      <p>Pick any of the 100 pictures. Your browser reads its pixels and computes four features from them. Each feature has a short recipe, and the recipe alone decides its value.</p>
+    </div></div>
+    <div class="two">
+      <div>
+        <div class="row" style="justify-content:space-between">
+          <div class="seg" role="group" aria-label="Show pictures of">
+            <button type="button" data-cls="all" aria-pressed="true">All 100</button>
+            <button type="button" data-cls="face" aria-pressed="false">Faces</button>
+            <button type="button" data-cls="place" aria-pressed="false">Places</button>
+            <button type="button" data-cls="object" aria-pressed="false">Objects</button>
+          </div>
+          <button type="button" class="btn" id="random">Surprise me</button>
+        </div>
+        <div class="thumbs" id="thumbs" role="group" aria-label="Pictures"></div>
+      </div>
+      <div class="viewer">
+        <div class="seg" role="group" aria-label="View" id="views" style="margin-bottom:8px">
+          <button type="button" data-view="rgb" aria-pressed="true">Picture</button>
+          <button type="button" data-view="lum" aria-pressed="false">Brightness</button>
+          <button type="button" data-view="rg" aria-pressed="false">Red–green</button>
+          <button type="button" data-view="yb" aria-pressed="false">Blue–yellow</button>
+          <button type="button" data-view="edges" aria-pressed="false">Edges</button>
+        </div>
+        <canvas id="view" width="425" height="425" aria-label="The picked picture"></canvas>
+        <p class="credit" id="credit"></p>
+        <p class="hint" id="viewnote" style="margin:4px 0 0"></p>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+    <p class="hint" style="margin:10px 0 0" id="cmpnote">Under each value is the number the research pipeline (viz2psy) computed from the same picture. The page's copy of the picture is a compressed JPEG, so your browser's value can differ in the last decimal place.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="panel" id="s2" aria-labelledby="h2s">
+    <div class="stephead"><span class="n">2</span><div>
+      <h2 id="h2s">Line up all 100 pictures by their features</h2>
+      <p>A feature turns every picture into a number, so the pictures can be sorted and plotted. Choose two features. Each picture lands where its two values put it.</p>
+    </div></div>
+    <div class="two">
+      <div class="figure sq"><canvas id="scatter" aria-label="Scatter plot of the 100 pictures by two features"></canvas></div>
+      <div style="display:grid;gap:12px">
+        <div class="ctl"><label for="sx">Across (x)</label><select id="sx"></select></div>
+        <div class="ctl"><label for="sy">Up (y)</label><select id="sy"></select></div>
+        <div class="row">
+          <div class="seg" role="group" aria-label="Marks">
+            <button type="button" data-marks="pics" aria-pressed="true">Pictures</button>
+            <button type="button" data-marks="dots" aria-pressed="false">Dots</button>
+          </div>
+        </div>
+        <div class="legend" aria-label="Legend"><span><i class="key face"></i>Faces</span><span><i class="key place"></i>Places</span><span><i class="key object"></i>Objects</span></div>
+        <div class="verdict" id="handverdict"></div>
+        <div class="prose" id="s2note"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="panel" id="s3" aria-labelledby="h3s">
+    <div class="stephead"><span class="n">3</span><div>
+      <h2 id="h3s">Sounds have features too</h2>
+      <p>Play a clip from the open film <i>Tears of Steel</i>, or use your own voice. Your browser computes three sound features as it listens.</p>
+    </div></div>
+    <div class="row" style="margin-bottom:10px" id="clipbar"></div>
+    <div class="scope">
+      <canvas id="spec" aria-label="Spectrogram: time runs left to right, frequency low to high, stronger colour means more energy"></canvas>
+      <div class="lines"><canvas id="loud" aria-label="Loudness over time"></canvas><canvas id="pitch" aria-label="Pitch over time"></canvas></div>
+    </div>
+    <div class="readout" aria-live="off"><span>Loudness <b id="r-loud">–</b></span><span>Pitch <b id="r-pitch">–</b></span></div>
+    <p class="subs" id="subs"></p>
+    <div class="two" style="margin-top:8px">
+      <div class="prose">
+        <p><b>Spectrogram</b> (top): the sound split into frequencies, low at the bottom and high at the top. Stronger colour means more energy at that frequency. Speech shows stacked bands (harmonics). Thunder smears energy everywhere.</p>
+      </div>
+      <div class="prose">
+        <p><b>Loudness</b> (middle) is the size of the waveform, in decibels below full scale. <b>Pitch</b> (bottom) is how many times per second the waveform repeats. It only exists while the sound repeats, so noise has none. In the film clips pitch appears only in patches, because music and room sound are mixed under every voice. Hum into the microphone to see a clean pitch line.</p>
+      </div>
+    </div>
+    <p class="hint" id="micnote" style="margin:4px 0 0">The microphone is used only while the button is on. Its sound is analysed in your browser and is never recorded or sent anywhere.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="panel" id="s4" aria-labelledby="h4s">
+    <div class="stephead"><span class="n">4</span><div>
+      <h2 id="h4s">Features a model has to learn</h2>
+      <p>Nobody can write a short recipe for "is there a face?" or "what kind of place is this?". Instead, a neural network is trained on many labelled examples until it gives the right answers. Then it can score new pictures. These numbers were computed in advance by the open-source package viz2psy, for the picture you picked in step 1.</p>
+    </div></div>
+    <div class="two side">
+      <div><canvas id="mini" width="220" height="220" style="width:100%;height:auto;border-radius:6px;background:var(--grid)" aria-label="The picked picture"></canvas>
+        <p class="hint" style="margin:6px 0 0">Change the picture in step 1, or with the neighbours in step 5.</p></div>
+      <div class="learned" id="learned"></div>
+    </div>
+    <div class="row" style="margin-top:12px" id="tryplots"></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="panel" id="s5" aria-labelledby="h5s">
+    <div class="stephead"><span class="n">5</span><div>
+      <h2 id="h5s">Hundreds of numbers at once: compare instead of reading</h2>
+      <p>Some models describe a picture with hundreds of numbers (an <b>embedding</b>). None of the numbers means much alone. What does carry meaning is <b>which pictures get similar numbers</b>. So we compare every picture with every other: a 100 × 100 table of dissimilarities, and a map that places similar pictures close together.</p>
+    </div></div>
+    <div class="seg" role="group" aria-label="Description" id="spaces" style="margin-bottom:6px"></div>
+    <p class="hint" id="spacewhat" style="margin:0 0 10px"></p>
+    <div class="two">
+      <div>
+        <p class="sub">Map: similar pictures sit close</p>
+        <div class="figure sq"><canvas id="map" aria-label="Map of the 100 pictures"></canvas></div>
+        <div class="legend" style="margin-top:6px"><span><i class="key face"></i>Faces</span><span><i class="key place"></i>Places</span><span><i class="key object"></i>Objects</span></div>
+      </div>
+      <div>
+        <p class="sub">Every pair: strong blue = very different</p>
+        <div class="figure sq"><canvas id="rdm" aria-label="Dissimilarity matrix: rows and columns are the 100 pictures, faces then places then objects"></canvas></div>
+        <p class="hint" style="margin:6px 0 0" id="rdmnote"></p>
+      </div>
+    </div>
+    <div class="two" style="margin-top:14px">
+      <div>
+        <p class="sub">Your picture's five nearest neighbours here</p>
+        <div class="nn" id="nn"></div>
+        <p class="hint" style="margin:6px 0 0">Click a neighbour to pick it.</p>
+      </div>
+      <div>
+        <p class="sub">How often is a picture's nearest neighbour in its own category?</p>
+        <div class="ladder" id="ladder"></div>
+        <p class="hint" style="margin:6px 0 0">The dashed line is chance (one in three). With the categories shuffled at random 10,000 times, 95 % of shuffles score at most about 43 %.</p>
+      </div>
+    </div>
+    <div class="prose" style="margin-top:12px" id="s5note"></div>
+  </section>
+
+  <footer class="about">
+    <p><b>The pictures.</b> 100 photographs from Wikimedia Commons (34 faces, 33 places, 33 objects), each CC0, public domain or CC BY. Each is shown at the size the feature pipeline scored it: about 425 × 425 pixels, keeping its shape. The credit for the picked picture is under it in step 1, and every credit is in the list below.</p>
+    <p><b>The sounds.</b> Clips from <i>Tears of Steel</i> (2012), (CC) Blender Foundation | <a href="https://mango.blender.org">mango.blender.org</a>, under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. The music is by Joram Letwory, <a href="https://www.tearsofsteel.org">tearsofsteel.org</a>.</p>
+    <p><b>How the stored features were made.</b> Every precomputed number on this page came from the open-source packages <a href="https://github.com/hulacon/viz2psy">viz2psy</a> (pictures) and <a href="https://github.com/hulacon/word2psy">word2psy</a> (caption text), collected by <a href="https://github.com/hulacon/psytwill">psytwill</a>. Models make mistakes, so when a learned feature disagrees with your eyes, the model is usually wrong. This page never shows raw embeddings, only the similarity table and the map computed from them (correlation distance; metric multidimensional scaling).</p>
+    <details class="credits">
+      <summary>Picture credits (all 100)</summary>
+      <div class="tablewrap"><table><thead><tr><th>Picture</th><th>Title</th><th>Credit</th><th>Licence</th></tr></thead><tbody id="img-credits"></tbody></table></div>
+    </details>
+    <details class="credits">
+      <summary>Models behind this page, and their licences</summary>
+      <p class="hint" style="margin:6px 0 0">Model weights are not redistributed here. The page shows only numbers the models computed on openly licensed pictures. Several models carry non-commercial, research-use or share-alike terms, and this free, non-commercial teaching site keeps to them.</p>
+      <div class="tablewrap"><table><thead><tr><th>Model</th><th>What it measures</th><th>Made by / weights</th><th>Terms</th></tr></thead><tbody id="credit-rows"></tbody></table></div>
+    </details>
+    <p>Code: MIT license, <a href="https://github.com/jhutchin/brainfeatures">source on GitHub</a>.</p>
+  </footer>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script src="hand.js"></script>
+<script src="data/features1.js"></script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const D = window.FEATURES1 || null;
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// ------------------------------------------------------------ credits (every model the page reads)
+
+const CREDITS = {
+  llstat: ["Low-level image statistics: brightness, colour, contrast, edges", "computed directly (NumPy, scikit-image)", "no model weights"],
+  faces: ["Faces found in the picture, and their size", "YuNet (OpenCV Zoo)", "weights MIT; trained on WIDER FACE (CC BY-NC-ND)"],
+  places: ["Scene category (365 kinds) and 102 scene attributes", "Places365 WideResNet-18 (MIT CSAIL)", "CC BY per the model README; the Places site limits use to research and education"],
+  yolo: ["Counts of 80 kinds of object (people, cars, cups…)", "YOLOv8n (Ultralytics)", "AGPL-3.0; trained on COCO"],
+  aesthetics: ["Predicted aesthetic rating, 1 to 10", "LAION improved aesthetic predictor on OpenAI CLIP ViT-L/14", "head Apache-2.0; CLIP MIT"],
+  resmem: ["Predicted memorability (share of people who would remember it)", "ResMem (Brain Bridge Lab)", "ResMem non-commercial licence"],
+  emonet: ["20 emotion categories a scene evokes", "EmoNet (Kragel et al., 2019)", "no licence found for the weights"],
+  depth: ["Scene layout from estimated depth: open vs enclosed", "Depth Anything V2 Small", "weights Apache-2.0; training data includes research-only sets (SA-1B, ImageNet-21K)"],
+  context_affect: ["Pleasantness and arousal inferred from the scene", "ridge probe on OpenAI CLIP ViT-L/14, trained on VEATIC", "CLIP MIT; VEATIC for research purposes"],
+  caption: ["One-sentence description of the picture", "BLIP large (Salesforce)", "BSD-3-Clause"],
+  gist: ["Oriented-filter energy: 4 scales × 8 orientations × a 4 × 4 grid (512 numbers; shown only as similarity)", "computed directly (Gabor filter bank)", "no model weights"],
+  dinov2: ["Embedding of the picture (768 numbers; shown only as similarity)", "DINOv2 ViT-B/14 (Meta)", "Apache-2.0; training data includes ImageNet-22k (non-commercial research and education)"],
+  clip: ["Embedding of the picture (512 numbers; shown only as similarity)", "OpenCLIP ViT-B/32 (LAION-2B)", "MIT"],
+  clip_text: ["Embedding of the caption text (512 numbers; shown only as similarity)", "OpenCLIP ViT-B/32 text encoder (LAION-2B)", "MIT"],
+  minilm: ["Sentence embedding of the caption (384 numbers; shown only as similarity)", "all-MiniLM-L6-v2 (sentence-transformers)", "Apache-2.0; training data includes MS MARCO (non-commercial research)"],
+};
+const PKG = { clip_text: "word2psy", minilm: "word2psy" };
+const LEARNED_MODELS = ["faces", "places", "yolo", "aesthetics", "resmem", "emonet", "depth", "context_affect", "caption"];
+
+// ------------------------------------------------------------ state
+
+const CLS_VAR = { face: "--face", place: "--place", object: "--object" };
+const CLS_NAME = { face: "Face", place: "Place", object: "Object" };
+const ITEMS = D ? D.items : [];
+const N = ITEMS.length;
+const state = { sel: 0, view: "rgb", cls: "all", sx: "hand.lum", sy: "hand.edges", marks: "pics", space: "clip" };
+let current = null;            // { idx, img, w, h, rgba, feats }
+const atlas = new Image();
+let atlasReady = false;
+
+function sprite(el, i, size) {
+  const a = D.atlas, cols = a.cols;
+  el.style.backgroundImage = `url(${a.file})`;
+  el.style.backgroundSize = `${cols * size}px auto`;
+  el.style.backgroundPosition = `${-(i % cols) * size}px ${-Math.floor(i / cols) * size}px`;
+}
+
+// ------------------------------------------------------------ step 1: picker and hand features
+
+const HAND_INFO = [
+  { k: "lum", name: "Brightness", view: "lum", fmt: (v) => v.toFixed(3),
+    how: "Turn each pixel into one brightness number (0.299 red + 0.587 green + 0.114 blue, from 0 to 1), then average over all pixels." },
+  { k: "contrast", name: "Contrast", view: "lum", fmt: (v) => v.toFixed(3),
+    how: "How much brightness varies: the standard deviation of pixel brightness, divided by the average." },
+  { k: "colour", name: "Colourfulness", view: "rg", fmt: (v) => v.toFixed(3),
+    how: "How strongly and how variably the pixels lean red vs green and blue vs yellow (Hasler & Süsstrunk, 2003)." },
+  { k: "edges", name: "Edge density", view: "edges", fmt: (v) => (100 * v).toFixed(1) + " %",
+    how: "Blur slightly, find where brightness changes fast, thin those places to lines (Canny's method), then count the share of pixels on a line." },
+];
+
+function buildPicker() {
+  const box = $("thumbs");
+  ITEMS.forEach((it, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.i = i; b.dataset.cls = it.cls;
+    b.setAttribute("aria-label", `${CLS_NAME[it.cls]}: ${it.title}`);
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => select(i));
+    box.appendChild(b);
+  });
+  sizeSprites();
+  document.querySelectorAll("[data-cls]").forEach((b) => b.tagName === "BUTTON" && b.closest(".seg") && b.addEventListener("click", () => {
+    state.cls = b.dataset.cls;
+    b.closest(".seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    box.querySelectorAll("button").forEach((t) => (t.hidden = state.cls !== "all" && t.dataset.cls !== state.cls));
+  }));
+  $("random").addEventListener("click", () => {
+    const pool = ITEMS.map((_, i) => i).filter((i) => i !== state.sel && (state.cls === "all" || ITEMS[i].cls === state.cls));
+    select(pool[Math.floor(Math.random() * pool.length)]);
+  });
+  $("views").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
+}
+
+function sizeSprites() {
+  document.querySelectorAll("#thumbs button").forEach((b) => sprite(b, +b.dataset.i, b.clientWidth || 40));
+}
+
+function buildCards() {
+  const box = $("cards");
+  for (const h of HAND_INFO) {
+    const c = document.createElement("div");
+    c.className = "card"; c.id = "card-" + h.k;
+    c.innerHTML = `<h3>${h.name}</h3><div class="how">${h.how}</div><div class="val" id="v-${h.k}">–</div>` +
+      `<div class="cmp" id="c-${h.k}"></div><button type="button" class="btn" data-show="${h.view}">Show me</button>`;
+    c.querySelector("button").addEventListener("click", () => setView(h.view));
+    box.appendChild(c);
+  }
+}
+
+function select(i) {
+  state.sel = i;
+  document.querySelectorAll("#thumbs button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.i === i)));
+  const it = ITEMS[i];
+  $("credit").innerHTML = `<b>${esc(it.title)}</b> · ${esc(it.credit)} · <a href="${it.page}" target="_blank" rel="noopener">source</a> · ${licenceHtml(it)}`;
+  const img = new Image();
+  img.onload = () => {
+    if (state.sel !== i) return;
+    const off = document.createElement("canvas");
+    off.width = img.naturalWidth; off.height = img.naturalHeight;
+    const ctx = off.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const rgba = ctx.getImageData(0, 0, off.width, off.height).data;
+    const feats = window.HAND.features(rgba, off.width, off.height);
+    current = { idx: i, img, w: off.width, h: off.height, rgba, feats };
+    showHand(); drawView(); drawMini();
+  };
+  img.onerror = () => { $("viewnote").textContent = "This picture did not load."; };
+  img.src = D.image_dir + `img-${it.id}.jpg`;
+  showLearned(); drawScatter(); drawMap(); drawRdm(); showNeighbours();
+}
+
+function showHand() {
+  const it = ITEMS[current.idx], v = current.feats.values;
+  for (const h of HAND_INFO) {
+    $("v-" + h.k).textContent = Number.isFinite(v[h.k]) ? h.fmt(v[h.k]) : "undefined";
+    const ref = it.hand[h.k];
+    $("c-" + h.k).textContent = ref === null ? "pipeline: undefined" : `pipeline: ${h.fmt(ref)}`;
+  }
+}
+
+function setView(v) {
+  state.view = v;
+  $("views").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+  document.querySelectorAll(".card").forEach((c) => c.dataset.on = String(HAND_INFO.find((h) => "card-" + h.k === c.id).view === v));
+  drawView();
+}
+
+const VIEWNOTE = {
+  rgb: "The picture as your browser received it.",
+  lum: "Each pixel's brightness alone. Brightness is the average of this image, and contrast is how much it varies.",
+  rg: "Red (pink) against green (teal) for each pixel; grey means neither. Colourfulness grows with how far and how variably pixels move from grey here and in blue–yellow.",
+  yb: "Blue against yellow for each pixel; grey means neither.",
+  edges: "The pixels Canny's method marks as edges. Edge density is the share of pixels that are lit.",
+};
+
+function drawView() {
+  const c = $("view");
+  $("viewnote").textContent = VIEWNOTE[state.view];
+  if (!current) return;
+  const { w, h, rgba, feats } = current;
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  if (state.view === "rgb") { ctx.drawImage(current.img, 0, 0); return; }
+  const out = ctx.createImageData(w, h), o = out.data, ch = feats.channels;
+  const dark = isDark();
+  for (let i = 0, j = 0; i < w * h; i++, j += 4) {
+    let r, g, b;
+    if (state.view === "lum") { r = g = b = 255 * ch.lum[i]; }
+    else if (state.view === "rg") { const t = Math.max(-1, Math.min(1, ch.rg[i] * 1.6)); r = 128 + 110 * t; g = 128 - 70 * t; b = 128 - 10 * t; }
+    else if (state.view === "yb") { const t = Math.max(-1, Math.min(1, ch.yb[i] * 1.6)); r = 128 + 90 * t; g = 128 + 70 * t; b = 128 - 120 * t; }
+    else { const e = feats.edgeMap[i]; r = g = b = e ? (dark ? 240 : 18) : (dark ? 25 : 250); }
+    o[j] = r; o[j + 1] = g; o[j + 2] = b; o[j + 3] = 255;
+  }
+  ctx.putImageData(out, 0, 0);
+}
+
+function drawMini() {
+  const c = $("mini"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  const W = c.clientWidth || 220;
+  c.width = W * dpr; c.height = W * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, W);
+  if (!current) return;
+  const s = Math.min(W / current.w, W / current.h), dw = current.w * s, dh = current.h * s;
+  ctx.drawImage(current.img, (W - dw) / 2, (W - dh) / 2, dw, dh);
+}
+
+// ------------------------------------------------------------ step 2: scatter
+
+const AXES = [
+  { group: "Your four features (step 1)", opts: [["hand.lum", "Brightness"], ["hand.contrast", "Contrast"], ["hand.colour", "Colourfulness"], ["hand.edges", "Edge density"]] },
+  { group: "More pixel statistics (llstat)", opts: [["ll.saturation_mean", "Saturation"], ["ll.r_mean", "Redness (mean red)"], ["ll.g_mean", "Greenness (mean green)"], ["ll.b_mean", "Blueness (mean blue)"], ["ll.hf_energy", "Fine detail (high spatial frequencies)"]] },
+  { group: "Learned by a model (step 4)", opts: [["learned.faces", "Faces found"], ["learned.face_area", "Face size (share of picture)"], ["learned.openness", "Open space (depth)"], ["learned.aesthetics", "Aesthetic rating"], ["learned.memorability", "Memorability"], ["learned.valence", "Pleasantness"], ["learned.arousal", "Arousal"], ["learned.objects_n", "Objects found"]] },
+];
+const AXIS_NAME = Object.fromEntries(AXES.flatMap((g) => g.opts));
+
+function getv(it, key) {
+  const [a, b] = key.split(".");
+  if (key === "learned.objects_n") return it.learned.objects.reduce((s, o) => s + o[1], 0);
+  const v = it[a][b];
+  return v === null || v === undefined ? NaN : v;
+}
+
+function buildScatter() {
+  for (const [id, def] of [["sx", state.sx], ["sy", state.sy]]) {
+    const s = $(id);
+    for (const g of AXES) {
+      const og = document.createElement("optgroup"); og.label = g.group;
+      for (const [k, name] of g.opts) { const o = document.createElement("option"); o.value = k; o.textContent = name; og.appendChild(o); }
+      s.appendChild(og);
+    }
+    s.value = def;
+    s.addEventListener("change", () => { state[id] = s.value; drawScatter(); });
+  }
+  document.querySelectorAll("[data-marks]").forEach((b) => b.addEventListener("click", () => {
+    state.marks = b.dataset.marks;
+    document.querySelectorAll("[data-marks]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    drawScatter(); drawMap();
+  }));
+  const hs = D.hand_sep;
+  $("handverdict").innerHTML = `Can these four features alone tell faces, places and objects apart? Using all four, a picture's nearest neighbour is in its own category <b>${pct(hs.nn1)}</b> of the time, against <b>33 %</b> by chance. That is barely better than guessing.`;
+  $("s2note").innerHTML = "<p>Places tend to have more edges, so edge density carries a little of the category. But a dim portrait and a dim forest look alike to all four recipes. These features describe the <b>pixels</b>, not what the picture <b>shows</b>.</p><p>Try the learned features at the bottom of each list: <b>Faces found</b> sorts the faces out at once.</p>";
+  hookPoints($("scatter"), () => scatterPts, (i) => `${ITEMS[i].title}\n${AXIS_NAME[state.sx]}: ${fmtv(getv(ITEMS[i], state.sx))}\n${AXIS_NAME[state.sy]}: ${fmtv(getv(ITEMS[i], state.sy))}`);
+}
+
+let scatterPts = [];
+function drawScatter() {
+  const c = $("scatter");
+  const { ctx, W, H } = prep(c);
+  const pad = { l: 46, r: 14, t: 12, b: 40 };
+  const xs = ITEMS.map((it) => getv(it, state.sx)), ys = ITEMS.map((it) => getv(it, state.sy));
+  const ext = (a) => { const f = a.filter(Number.isFinite); let lo = Math.min(...f), hi = Math.max(...f); if (hi === lo) { lo -= 0.5; hi += 0.5; } const m = (hi - lo) * 0.06; return [lo - m, hi + m]; };
+  const [x0, x1] = ext(xs), [y0, y1] = ext(ys);
+  const X = (v) => pad.l + (v - x0) / (x1 - x0) * (W - pad.l - pad.r);
+  const Y = (v) => H - pad.b - (v - y0) / (y1 - y0) * (H - pad.t - pad.b);
+  axes(ctx, W, H, pad, [x0, x1], [y0, y1], X, Y, AXIS_NAME[state.sx], AXIS_NAME[state.sy]);
+  scatterPts = [];
+  const order = ITEMS.map((_, i) => i).filter((i) => i !== state.sel).concat([state.sel]);
+  const jit = (i, k) => (((i * 9301 + k * 49297) % 233280) / 233280 - 0.5);   // fixed jitter for discrete values
+  const disc = (key) => key === "learned.faces" || key === "learned.objects_n";
+  for (const i of order) {
+    if (!Number.isFinite(xs[i]) || !Number.isFinite(ys[i])) continue;
+    let px = X(xs[i]), py = Y(ys[i]);
+    if (disc(state.sx)) px += jit(i, 1) * 18;
+    if (disc(state.sy)) py += jit(i, 2) * 18;
+    scatterPts.push([px, py, i]);
+    mark(ctx, px, py, i, state.marks === "pics" ? 26 : 9, i === state.sel);
+  }
+}
+
+// ------------------------------------------------------------ step 3: sound
+
+const SND = { ctx: null, an: null, el: null, srcEl: null, mic: null, micSrc: null, mode: null, raf: 0, t0: 0, hist: [], specCol: 0 };
+const WINDOW_S = 7;
+
+function buildSound() {
+  const bar = $("clipbar");
+  for (const c of D.clips) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn"; b.dataset.clip = c.key; b.textContent = "▶ " + c.label;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => playClip(c, b));
+    bar.appendChild(b);
+  }
+  const m = document.createElement("button");
+  m.type = "button"; m.className = "btn"; m.id = "micbtn"; m.textContent = "● Your voice (microphone)"; m.setAttribute("aria-pressed", "false");
+  m.addEventListener("click", toggleMic);
+  bar.appendChild(m);
+  const s = document.createElement("button");
+  s.type = "button"; s.className = "btn"; s.textContent = "■ Stop"; s.addEventListener("click", stopSound);
+  bar.appendChild(s);
+  drawSoundFrame(true);
+}
+
+function ensureCtx() {
+  if (SND.ctx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  SND.ctx = new AC();
+  SND.an = SND.ctx.createAnalyser();
+  SND.an.fftSize = 2048; SND.an.smoothingTimeConstant = 0;
+  SND.an.minDecibels = -100; SND.an.maxDecibels = -20;
+  SND.el = new Audio(); SND.el.crossOrigin = "anonymous"; SND.el.preload = "auto";
+  SND.srcEl = SND.ctx.createMediaElementSource(SND.el);
+  SND.srcEl.connect(SND.an); SND.srcEl.connect(SND.ctx.destination);
+  SND.el.addEventListener("ended", () => { SND.mode = null; pressClip(null); });
+}
+
+function pressClip(key) {
+  document.querySelectorAll("[data-clip]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.clip === key)));
+  $("micbtn").setAttribute("aria-pressed", String(key === "mic"));
+}
+
+function resetTrace() { SND.hist = []; SND.t0 = performance.now(); clearSpec(); }
+
+async function playClip(c, btn) {
+  ensureCtx();
+  stopMic();
+  await SND.ctx.resume();
+  SND.el.src = c.file; SND.el.currentTime = 0;
+  try { await SND.el.play(); } catch (e) { $("subs").textContent = "The clip could not play: " + e.message; return; }
+  SND.mode = c.key; pressClip(c.key);
+  $("subs").textContent = c.lines.length ? "“" + c.lines.join(" ") + "”" : c.note;
+  if (c.lines.length) $("subs").textContent += "  " + c.note;
+  resetTrace(); loop();
+}
+
+async function toggleMic() {
+  if (SND.mode === "mic") { stopSound(); return; }
+  ensureCtx();
+  SND.el.pause();
+  try {
+    SND.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    $("subs").textContent = "No microphone available, or permission was declined. The film clips work without one.";
+    return;
+  }
+  await SND.ctx.resume();
+  SND.micSrc = SND.ctx.createMediaStreamSource(SND.mic);
+  SND.micSrc.connect(SND.an);           // analysed only: not sent to the speakers
+  SND.mode = "mic"; pressClip("mic");
+  $("subs").textContent = "Listening. Try a steady hum, then slide your voice up and down, then whistle, then say “shh”.";
+  resetTrace(); loop();
+}
+
+function stopMic() {
+  if (SND.micSrc) { SND.micSrc.disconnect(); SND.micSrc = null; }
+  if (SND.mic) { SND.mic.getTracks().forEach((t) => t.stop()); SND.mic = null; }
+}
+
+function stopSound() {
+  if (SND.el) SND.el.pause();
+  stopMic();
+  SND.mode = null; pressClip(null);
+}
+
+// Pitch by normalised autocorrelation: the lag at which the waveform best
+// matches a shifted copy of itself, searched between 70 and 500 Hz.
+function pitchOf(buf, sr) {
+  const n = buf.length, lo = Math.floor(sr / 500), hi = Math.min(Math.floor(sr / 70), n >> 1);
+  let best = -1, bestLag = 0, prev = 0, rs = [];
+  for (let lag = lo; lag <= hi; lag++) {
+    let s = 0, e1 = 0, e2 = 0;
+    for (let i = 0; i + lag < n; i++) { const a = buf[i], b = buf[i + lag]; s += a * b; e1 += a * a; e2 += b * b; }
+    const r = s / Math.sqrt(e1 * e2 + 1e-12);
+    rs.push(r);
+    if (r > best) { best = r; bestLag = lag; }
+    prev = r;
+  }
+  if (best < 0.75) return NaN;
+  // prefer the shortest lag close to the best (avoids octave errors)
+  for (let k = 0; k < rs.length; k++) {
+    const lag = lo + k;
+    if (rs[k] >= 0.92 * best && k > 0 && k < rs.length - 1 && rs[k] >= rs[k - 1] && rs[k] >= rs[k + 1]) { bestLag = lag; break; }
+  }
+  const k = bestLag - lo, y0 = rs[k - 1] ?? rs[k], y1 = rs[k], y2 = rs[k + 1] ?? rs[k];
+  const den = y0 - 2 * y1 + y2, shift = den ? 0.5 * (y0 - y2) / den : 0;
+  return sr / (bestLag + shift);
+}
+
+function loop() {
+  cancelAnimationFrame(SND.raf);
+  const td = new Float32Array(SND.an.fftSize), fd = new Uint8Array(SND.an.frequencyBinCount);
+  const step = () => {
+    if (!SND.mode) { drawSoundFrame(false); return; }
+    SND.an.getFloatTimeDomainData(td);
+    SND.an.getByteFrequencyData(fd);
+    let e = 0; for (let i = 0; i < td.length; i++) e += td[i] * td[i];
+    const rms = Math.sqrt(e / td.length), db = 20 * Math.log10(rms + 1e-9);
+    const f0 = db > -50 ? pitchOf(td, SND.ctx.sampleRate) : NaN;
+    const t = (performance.now() - SND.t0) / 1000;
+    SND.hist.push([t, db, f0]);
+    while (SND.hist.length && SND.hist[0][0] < t - WINDOW_S) SND.hist.shift();
+    $("r-loud").textContent = db > -90 ? db.toFixed(0) + " dB" : "silent";
+    $("r-pitch").textContent = Number.isFinite(f0) ? f0.toFixed(0) + " Hz" : "none";
+    addSpecColumn(fd, t);
+    drawSoundFrame(false);
+    SND.raf = requestAnimationFrame(step);
+  };
+  SND.raf = requestAnimationFrame(step);
+}
+
+// Spectrogram: an offscreen strip that scrolls left; frequency on a log axis, 60 Hz to 11 kHz.
+const SPEC = { off: null, lastT: 0 };
+const F_LO = 60, F_HI = 11000;
+function clearSpec() {
+  const c = $("spec"), w = Math.max(200, Math.round(c.clientWidth || 600)), h = 150;
+  SPEC.off = document.createElement("canvas"); SPEC.off.width = w; SPEC.off.height = h;
+  const g = SPEC.off.getContext("2d"); g.fillStyle = css("--grid"); g.fillRect(0, 0, w, h);
+  SPEC.lastT = 0;
+}
+function addSpecColumn(fd, t) {
+  if (!SPEC.off) clearSpec();
+  const off = SPEC.off, g = off.getContext("2d"), w = off.width, h = off.height;
+  const pxPerS = w / WINDOW_S, dx = Math.max(1, Math.round((t - SPEC.lastT) * pxPerS));
+  SPEC.lastT += dx / pxPerS;
+  g.drawImage(off, -dx, 0);
+  const lo = hexRgb(css("--grid")), hi = hexRgb(css("--spec")), hi2 = hexRgb(css("--ink"));
+  const nyq = SND.ctx.sampleRate / 2, bins = fd.length;
+  for (let y = 0; y < h; y++) {
+    const f = F_LO * Math.pow(F_HI / F_LO, 1 - y / (h - 1));
+    const v = fd[Math.min(bins - 1, Math.round(f / nyq * bins))] / 255;
+    const c = v < 0.6 ? mix(lo, hi, v / 0.6) : mix(hi, hi2, (v - 0.6) / 0.4);
+    g.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+    g.fillRect(w - dx, y, dx, 1);
+  }
+}
+
+function drawSoundFrame(blank) {
+  // spectrogram
+  const c = $("spec"), { ctx, W, H } = prep(c);
+  if (!SPEC.off || blank) clearSpec();
+  ctx.drawImage(SPEC.off, 0, 0, W, H);
+  ctx.fillStyle = css("--ink-3"); ctx.font = `11px ${css("--font-mono")}`;
+  for (const f of [100, 1000, 10000]) {
+    const y = (1 - Math.log(f / F_LO) / Math.log(F_HI / F_LO)) * H;
+    ctx.fillText(f >= 1000 ? f / 1000 + " kHz" : f + " Hz", 6, Math.max(11, y - 2));
+  }
+  if (blank) { ctx.fillStyle = css("--ink-2"); ctx.font = `13px ${css("--font-body")}`; ctx.fillText("Press a clip to start", 70, H / 2); }
+  const t1 = SND.hist.length ? SND.hist[SND.hist.length - 1][0] : WINDOW_S, t0 = t1 - WINDOW_S;
+  lineTrace($("loud"), SND.hist.map((h) => [h[0], h[1]]), t0, t1, -70, 0, (v) => v + " dB", [-60, -40, -20], "Loudness", false);
+  lineTrace($("pitch"), SND.hist.map((h) => [h[0], h[2]]), t0, t1, 60, 500, (v) => v + " Hz", [100, 200, 400], "Pitch", true);
+}
+
+function lineTrace(c, pts, t0, t1, lo, hi, lab, ticks, title, logy) {
+  const { ctx, W, H } = prep(c);
+  const pad = { l: 56, r: 8, t: 6, b: 6 };
+  const Y = (v) => { const u = logy ? Math.log(v / lo) / Math.log(hi / lo) : (v - lo) / (hi - lo); return H - pad.b - Math.max(0, Math.min(1, u)) * (H - pad.t - pad.b); };
+  const X = (t) => pad.l + (t - t0) / (t1 - t0) * (W - pad.l - pad.r);
+  ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.fillStyle = css("--ink-3"); ctx.font = `10px ${css("--font-mono")}`;
+  for (const v of ticks) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke(); ctx.fillText(lab(v), 4, y + 3); }
+  ctx.fillStyle = css("--ink-2"); ctx.font = `600 11px ${css("--font-body")}`; ctx.fillText(title, pad.l + 4, pad.t + 10);
+  ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath(); let pen = false;
+  for (const [t, v] of pts) {
+    if (!Number.isFinite(v) || (logy && v <= 0)) { pen = false; continue; }
+    const x = X(t), y = Y(v);
+    if (pen) ctx.lineTo(x, y); else { ctx.moveTo(x, y); pen = true; }
+  }
+  ctx.stroke();
+}
+
+// ------------------------------------------------------------ step 4: learned features
+
+function showLearned() {
+  const it = ITEMS[state.sel], L = it.learned, box = $("learned");
+  const bars = (rows) => `<div class="bars">${rows.map(([k, v]) => `<div class="bar"><span class="bl">${esc(k)}</span><span class="bn">${(100 * v).toFixed(0)} %</span><span class="bt"><i style="width:${Math.max(2, 100 * v).toFixed(0)}%"></i></span></div>`).join("")}</div>`;
+  const objs = L.objects.length ? L.objects.map(([k, n]) => `${n} × ${esc(k)}`).join(", ") : "nothing it knows";
+  const cards = [
+    ["caption-card", "Caption", `<div class="lv">“${esc(it.caption || "")}”</div>`, "caption"],
+    ["", "Faces found", `<div class="lv big">${L.faces}</div><div class="lm">${L.faces ? `covering ${(100 * L.face_area).toFixed(1)} % of the picture` : ""}</div>`, "faces"],
+    ["", "What kind of place", bars(L.places), "places"],
+    ["", "Scene attributes", bars(L.sun), "places"],
+    ["", "Objects found", `<div class="lv">${objs}</div>`, "yolo"],
+    ["", "Emotions it evokes", bars(L.emotions), "emonet"],
+    ["", "Aesthetic rating", `<div class="lv big">${fmtv(L.aesthetics, 1)}</div><div class="lm">on a 1–10 scale of people's ratings</div>`, "aesthetics"],
+    ["", "Memorability", `<div class="lv big">${fmtv(L.memorability, 2)}</div><div class="lm">predicted share of people who would recognise it later</div>`, "resmem"],
+    ["", "Open space", `<div class="lv big">${fmtv(L.openness, 2)}</div><div class="lm">from a depth map: open landscape high, close-up low</div>`, "depth"],
+    ["", "Pleasantness · arousal", `<div class="lv big">${fmtv(L.valence, 2)} · ${fmtv(L.arousal, 2)}</div><div class="lm">inferred from the scene</div>`, "context_affect"],
+  ];
+  box.innerHTML = cards.map(([cl, h, body, m]) => `<div class="lcard ${cl}"><h3>${h}</h3>${body}<div class="lm">${esc(CREDITS[m][1])}</div></div>`).join("");
+}
+
+function buildTryPlots() {
+  const box = $("tryplots");
+  box.innerHTML = '<span class="hint">Plot all 100 in step 2:</span>';
+  for (const [x, y, label] of [["learned.faces", "hand.lum", "Faces vs brightness"], ["learned.openness", "hand.edges", "Open space vs edges"], ["learned.memorability", "learned.aesthetics", "Memorability vs beauty"]]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn"; b.textContent = label;
+    b.addEventListener("click", () => { state.sx = x; state.sy = y; $("sx").value = x; $("sy").value = y; drawScatter(); $("s2").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    box.appendChild(b);
+  }
+}
+
+// ------------------------------------------------------------ step 5: similarity
+
+let SPACE = null, RD = null, RK = null;
+function buildSpaces() {
+  const seg = $("spaces");
+  for (const s of D.spaces) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.space = s.key; b.textContent = s.label;
+    b.setAttribute("aria-pressed", String(s.key === state.space));
+    b.addEventListener("click", () => setSpace(s.key));
+    seg.appendChild(b);
+  }
+  const lad = $("ladder");
+  const rungs = [{ key: "hand", label: "Your four features", sep: D.hand_sep }].concat(D.spaces.map((s) => ({ key: s.key, label: s.label, sep: s.sep })));
+  for (const r of rungs) {
+    const d = document.createElement("div");
+    d.className = "rung"; d.dataset.key = r.key; d.setAttribute("role", "button"); d.tabIndex = 0;
+    d.innerHTML = `<span>${esc(r.label)}</span><span class="track"><span class="fill" style="width:${(100 * r.sep.nn1).toFixed(1)}%"></span><span class="chance" style="left:33.3%"></span></span><span class="pct">${pct(r.sep.nn1)}</span>`;
+    const go = () => r.key === "hand" ? $("s2").scrollIntoView({ behavior: "smooth" }) : setSpace(r.key);
+    d.addEventListener("click", go);
+    d.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    lad.appendChild(d);
+  }
+  hookPoints($("map"), () => mapPts, (i) => ITEMS[i].title);
+  hookRdm();
+  setSpace(state.space);
+}
+
+function setSpace(key) {
+  state.space = key;
+  SPACE = D.spaces.find((s) => s.key === key);
+  // unpack the upper triangle into a full matrix
+  RD = new Float32Array(N * N);
+  let k = 0;
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) { RD[i * N + j] = RD[j * N + i] = SPACE.rdm[k++]; }
+  // percentile rank of each pair among all pairs, for the colour scale
+  const idx = SPACE.rdm.map((_, q) => q).sort((a, b) => SPACE.rdm[a] - SPACE.rdm[b]), rank = new Float32Array(idx.length);
+  idx.forEach((q, r) => (rank[q] = r / (idx.length - 1)));
+  RK = new Float32Array(N * N); k = 0;
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) { RK[i * N + j] = RK[j * N + i] = rank[k++]; }
+  $("spaces").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.space === key)));
+  document.querySelectorAll(".rung").forEach((r) => r.setAttribute("aria-current", String(r.dataset.key === key)));
+  $("spacewhat").textContent = `${SPACE.what}. ${SPACE.dims} numbers per ${SPACE.input === "caption" ? "caption" : "picture"}.`;
+  const s = SPACE.sep;
+  $("rdmnote").textContent = `Rows and columns run faces, places, objects. Colour shows each pair's rank among all pairs, from most alike (faint) to most different (strong blue). Dissimilarity = 1 − correlation between two pictures' numbers${SPACE.zscored ? " (each statistic first rescaled to mean 0, SD 1)" : ""}. Average: ${s.within.toFixed(2)} within a category, ${s.between.toFixed(2)} between categories.`;
+  const order = { llstat: 0, gist: 1, dinov2: 2, clip: 3, clip_text: 4, minilm: 5 }[key];
+  const notes = [
+    "Pixel statistics barely group the pictures by category. Pictures land near others with similar brightness and colour, whatever they show.",
+    "GIST measures how edges at different scales and orientations are laid out, with no learning. That already gives most faces and places a neighbour from their own category (about 80 %), but objects only about half the time.",
+    "DINOv2 learned from 142 million photos with no labels at all. Even so, its numbers put faces with faces and places with places almost every time. The objects, a mixed bag of things, are grouped less well (64 %).",
+    "CLIP learned to match photos with their captions. In its numbers, the three categories pull almost completely apart.",
+    "These numbers come from the caption text alone, not the pixels. Words carry most of the category too: a caption says “a man” or “a mountain”.",
+    "A different text model, trained on pairs of related sentences, run on the same captions. Category structure appears again, and the nearest-neighbour score is a little lower than with CLIP's text encoder.",
+  ];
+  $("s5note").innerHTML = `<p>${notes[order]}</p><p><b>Why this matters for the brain:</b> a brain region also gives each picture a pattern of activity, so it has a dissimilarity table of its own. Comparing a region's table with a model's tells you which model describes that region best (representational similarity analysis, RSA). Page 3 will let you try that on a simulated brain.</p>`;
+  drawMap(); drawRdm(); showNeighbours();
+}
+
+let mapPts = [];
+function drawMap() {
+  if (!SPACE) return;
+  const c = $("map"), { ctx, W, H } = prep(c), m = 22;
+  ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+  const X = (v) => m + (v + 1) / 2 * (W - 2 * m), Y = (v) => m + (1 - (v + 1) / 2) * (H - 2 * m);
+  mapPts = [];
+  const order = ITEMS.map((_, i) => i).filter((i) => i !== state.sel).concat([state.sel]);
+  const nn = neighbours(state.sel, 5);
+  ctx.strokeStyle = css("--ink-3"); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  const [sx, sy] = SPACE.xy[state.sel];
+  for (const j of nn) { ctx.beginPath(); ctx.moveTo(X(sx), Y(sy)); ctx.lineTo(X(SPACE.xy[j][0]), Y(SPACE.xy[j][1])); ctx.stroke(); }
+  ctx.setLineDash([]);
+  for (const i of order) {
+    const [x, y] = SPACE.xy[i];
+    mapPts.push([X(x), Y(y), i]);
+    mark(ctx, X(x), Y(y), i, state.marks === "pics" ? 24 : 9, i === state.sel);
+  }
+}
+
+function drawRdm() {
+  if (!SPACE) return;
+  const c = $("rdm"), { ctx, W, H } = prep(c), pad = 16, S = Math.min(W, H) - pad, cell = S / N;
+  const a = hexRgb(css("--seq-lo")), b = hexRgb(css("--seq-hi"));
+  const img = ctx.createImageData(N, N);
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const t = i === j ? 0 : RK[i * N + j], col = mix(a, b, t), p = 4 * (i * N + j);
+    img.data[p] = col[0]; img.data[p + 1] = col[1]; img.data[p + 2] = col[2]; img.data[p + 3] = 255;
+  }
+  const off = document.createElement("canvas"); off.width = N; off.height = N; off.getContext("2d").putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, pad, pad, S, S);
+  // category bands
+  let start = 0;
+  for (const cl of D.classes) {
+    const n = ITEMS.filter((it) => it.cls === cl).length;
+    ctx.fillStyle = css(CLS_VAR[cl]);
+    ctx.fillRect(pad + start * cell, 4, n * cell - 2, 6);
+    ctx.fillRect(4, pad + start * cell, 6, n * cell - 2);
+    start += n;
+  }
+  // selected row and column
+  ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2;
+  ctx.strokeRect(pad, pad + state.sel * cell, S, cell);
+  ctx.strokeRect(pad + state.sel * cell, pad, cell, S);
+  RDMGEOM = { pad, cell, S };
+}
+let RDMGEOM = null;
+
+function hookRdm() {
+  const c = $("rdm"), tip = $("tip");
+  c.addEventListener("mousemove", (e) => {
+    if (!RDMGEOM) return;
+    const r = c.getBoundingClientRect(), x = e.clientX - r.left - RDMGEOM.pad, y = e.clientY - r.top - RDMGEOM.pad;
+    const i = Math.floor(y / RDMGEOM.cell), j = Math.floor(x / RDMGEOM.cell);
+    if (i < 0 || j < 0 || i >= N || j >= N) { tip.hidden = true; return; }
+    tip.innerHTML = `<div style="display:flex;gap:4px">${thumbHtml(i, 64)}${thumbHtml(j, 64)}</div>${i === j ? "the same picture" : "dissimilarity " + RD[i * N + j].toFixed(2)}`;
+    placeTip(e);
+  });
+  c.addEventListener("mouseleave", () => (tip.hidden = true));
+  c.addEventListener("click", (e) => {
+    if (!RDMGEOM) return;
+    const r = c.getBoundingClientRect(), i = Math.floor((e.clientY - r.top - RDMGEOM.pad) / RDMGEOM.cell);
+    if (i >= 0 && i < N) select(i);
+  });
+}
+
+function neighbours(i, k) {
+  if (!RD) return [];
+  return ITEMS.map((_, j) => j).filter((j) => j !== i).sort((a, b) => RD[i * N + a] - RD[i * N + b]).slice(0, k);
+}
+
+function showNeighbours() {
+  const box = $("nn");
+  box.innerHTML = "";
+  for (const j of neighbours(state.sel, 5)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.setAttribute("aria-label", `${CLS_NAME[ITEMS[j].cls]}: ${ITEMS[j].title}`);
+    b.style.borderColor = css(CLS_VAR[ITEMS[j].cls]);
+    sprite(b, j, 52);
+    b.addEventListener("click", () => select(j));
+    box.appendChild(b);
+  }
+}
+
+// ------------------------------------------------------------ drawing helpers
+
+function prep(c) {
+  const dpr = window.devicePixelRatio || 1, W = c.clientWidth || 300, H = c.clientHeight || 150;
+  c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  return { ctx, W, H };
+}
+
+function axes(ctx, W, H, pad, xr, yr, X, Y, xl, yl) {
+  ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.fillStyle = css("--ink-3"); ctx.font = `10px ${css("--font-mono")}`;
+  for (const v of ticks(xr)) { const x = Math.round(X(v)) + 0.5; ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H - pad.b); ctx.stroke(); ctx.textAlign = "center"; ctx.fillText(tickLab(v), x, H - pad.b + 13); }
+  for (const v of ticks(yr)) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(tickLab(v), pad.l - 5, y + 3); }
+  ctx.textAlign = "center"; ctx.fillStyle = css("--ink-2"); ctx.font = `12px ${css("--font-body")}`;
+  ctx.fillText(xl, (pad.l + W - pad.r) / 2, H - 6);
+  ctx.save(); ctx.translate(12, (pad.t + H - pad.b) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yl, 0, 0); ctx.restore();
+  ctx.textAlign = "left";
+}
+function ticks([lo, hi]) {
+  const span = hi - lo, step0 = Math.pow(10, Math.floor(Math.log10(span / 4))), m = span / 4 / step0;
+  const step = step0 * (m >= 5 ? 5 : m >= 2 ? 2 : 1), out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function tickLab(v) { const a = Math.abs(v); return a >= 100 ? v.toFixed(0) : a >= 1 || v === 0 ? (+v.toFixed(2)).toString() : (+v.toFixed(3)).toString(); }
+
+// A picture (thumbnail with a class-coloured frame) or a dot whose shape gives its class.
+function mark(ctx, x, y, i, size, selected) {
+  const cl = ITEMS[i].cls, col = css(CLS_VAR[cl]), half = size / 2;
+  if (size > 12 && atlasReady) {
+    const a = D.atlas, sx = (i % a.cols) * a.cell, sy = Math.floor(i / a.cols) * a.cell;
+    ctx.fillStyle = css("--panel"); ctx.fillRect(x - half - 3, y - half - 3, size + 6, size + 6);
+    ctx.fillStyle = col; ctx.fillRect(x - half - 2, y - half - 2, size + 4, size + 4);
+    ctx.drawImage(atlas, sx, sy, a.cell, a.cell, x - half, y - half, size, size);
+  } else {
+    ctx.fillStyle = col; ctx.strokeStyle = css("--panel"); ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (cl === "face") ctx.arc(x, y, half, 0, 2 * Math.PI);
+    else if (cl === "place") ctx.rect(x - half * 0.9, y - half * 0.9, size * 0.9, size * 0.9);
+    else { ctx.moveTo(x, y - half * 1.1); ctx.lineTo(x + half, y + half * 0.8); ctx.lineTo(x - half, y + half * 0.8); ctx.closePath(); }
+    ctx.fill(); ctx.stroke();
+  }
+  if (selected) { ctx.strokeStyle = css("--ink"); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, half + 8, 0, 2 * Math.PI); ctx.stroke(); }
+}
+
+function hookPoints(c, getPts, label) {
+  const tip = $("tip");
+  const hit = (e) => {
+    const r = c.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    let best = -1, bd = 20 * 20;
+    for (const [px, py, i] of getPts()) { const d = (px - x) ** 2 + (py - y) ** 2; if (d <= bd) { bd = d; best = i; } }
+    return best;
+  };
+  c.addEventListener("mousemove", (e) => {
+    const i = hit(e);
+    if (i < 0) { tip.hidden = true; return; }
+    tip.innerHTML = `${thumbHtml(i, 72)}${esc(label(i)).replace(/\n/g, "<br>")}`;
+    placeTip(e);
+  });
+  c.addEventListener("mouseleave", () => (tip.hidden = true));
+  c.addEventListener("click", (e) => { const i = hit(e); if (i >= 0) select(i); });
+}
+function thumbHtml(i, size) {
+  const a = D.atlas;
+  return `<span style="display:block;width:${size}px;height:${size}px;border-radius:4px;margin-bottom:4px;background:url(${a.file}) ${-(i % a.cols) * size}px ${-Math.floor(i / a.cols) * size}px / ${a.cols * size}px auto no-repeat"></span>`;
+}
+function placeTip(e) {
+  const tip = $("tip");
+  tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > window.innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = Math.max(4, x) + "px"; tip.style.top = Math.max(4, y) + "px";
+}
+
+function hexRgb(h) {
+  h = h.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function mix(a, b, t) { t = Math.max(0, Math.min(1, t)); return [0, 1, 2].map((k) => Math.round(a[k] + (b[k] - a[k]) * t)); }
+function isDark() { return hexRgb(css("--bg"))[0] < 80; }
+function pct(v) { return Math.round(100 * v) + " %"; }
+function fmtv(v, d = 3) { return v === null || v === undefined || !Number.isFinite(v) ? "–" : (+v).toFixed(d); }
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+// ------------------------------------------------------------ credits tables
+
+function licenceHtml(it) {
+  return it.license_url ? `<a href="${it.license_url}" target="_blank" rel="noopener">${esc(it.license)}</a>` : esc(it.license);
+}
+
+function buildCredits() {
+  const used = ["llstat", ...LEARNED_MODELS, ...D.spaces.map((s) => s.model)];
+  const rows = [...new Set(used)].map((m) => `<tr><td>${m}</td><td>${esc(CREDITS[m][0])}</td><td>${esc(CREDITS[m][1])} <span class="hint">(${PKG[m] || "viz2psy"})</span></td><td>${esc(CREDITS[m][2])}</td></tr>`);
+  $("credit-rows").innerHTML = rows.join("");
+  $("img-credits").innerHTML = ITEMS.map((it) => `<tr><td>${it.id}</td><td><a href="${it.page}" target="_blank" rel="noopener">${esc(it.title)}</a></td><td>${esc(it.credit)}</td><td>${licenceHtml(it)}</td></tr>`).join("");
+}
+
+// ------------------------------------------------------------ start
+
+function redrawAll() { sizeSprites(); drawScatter(); drawMap(); drawRdm(); drawView(); drawMini(); drawSoundFrame(!SND.mode && !SND.hist.length); showNeighbours(); }
+
+if (!D) {
+  $("nodata").hidden = false;
+} else {
+  atlas.onload = () => { atlasReady = true; drawScatter(); drawMap(); };
+  atlas.src = D.atlas.file;
+  buildPicker(); buildCards(); buildScatter(); buildSound(); buildTryPlots(); buildCredits(); buildSpaces();
+  select(ITEMS.findIndex((it) => it.cls === "place"));
+  setView("rgb");
+  let rt = 0;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(redrawAll, 120); });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { clearSpec(); redrawAll(); });
+}
+</script>
