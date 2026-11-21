@@ -1,0 +1,946 @@
+<title>Features Over Time</title>
+<meta name="description" content="Watch an open film beside the numbers that computer models compute from it, moment by moment.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: the film is the instrument. Guided steps on the left; the player, the
+     moment's readout and the feature lanes in the middle, all on one clock. */
+  :root {
+    --bg: #f3f5f6;
+    --panel: #ffffff;
+    --ink: #121619;
+    --ink-2: #49525a;
+    --ink-3: #737c85;
+    --line: #dce1e5;
+    --accent: #0b6e69;
+    --accent-soft: #d6ece9;
+    --on-accent: #ffffff;
+    --vis: #2a6fc9;
+    --aud: #b8520e;
+    --txt: #7a43c9;
+    --head: #121619;
+    --warn-bg: #fff4d6;
+    --warn-ink: #6b4a00;
+    --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111416; --panel: #191d20; --ink: #eef1f3; --ink-2: #b3bbc2; --ink-3: #848d95;
+      --line: #2b3237; --accent: #47b8ad; --accent-soft: #173734; --on-accent: #0b1514;
+      --vis: #6aa8f2; --aud: #f0914f; --txt: #b394f2; --head: #eef1f3;
+      --warn-bg: #3a2f12; --warn-ink: #f3d68a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111416; --panel: #191d20; --ink: #eef1f3; --ink-2: #b3bbc2; --ink-3: #848d95;
+    --line: #2b3237; --accent: #47b8ad; --accent-soft: #173734; --on-accent: #0b1514;
+    --vis: #6aa8f2; --aud: #f0914f; --txt: #b394f2; --head: #eef1f3;
+    --warn-bg: #3a2f12; --warn-ink: #f3d68a;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--font-body);
+    font-size: 15px; line-height: 1.5; margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 40px;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); }
+
+  .wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 18px; }
+
+  header.top { display: grid; gap: 10px; }
+  .brandline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.01em; }
+  .badge {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--accent-soft); color: var(--ink); padding: 2px 8px; border-radius: 4px;
+  }
+  .lede { margin: 0; max-width: 72ch; color: var(--ink-2); }
+  nav.series { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.series a, nav.series span {
+    font-size: 0.85rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3); text-decoration: none;
+  }
+  nav.series a { color: var(--ink-2); }
+  nav.series a:hover { border-color: var(--accent); }
+  nav.series .current { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .bench { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .side { display: grid; gap: 14px; min-width: 0; }
+  .main { display: grid; gap: 14px; min-width: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; min-width: 0; }
+  .panel h2 { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 10px; }
+  .hint { font-size: 0.8rem; color: var(--ink-3); }
+
+  /* guided steps */
+  .steps { display: grid; gap: 6px; }
+  .step {
+    display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; text-align: left;
+    background: none; border: 1px solid transparent; border-radius: 8px; padding: 7px 8px; cursor: pointer;
+  }
+  .step:hover { background: var(--accent-soft); }
+  .step[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .step .n {
+    width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 0.78rem; border: 1px solid var(--ink-3); color: var(--ink-2);
+  }
+  .step[aria-current="true"] .n { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .step .t { font-weight: 600; font-size: 0.95rem; }
+  .step-text { margin: 10px 2px 2px; color: var(--ink-2); font-size: 0.93rem; }
+  .step-text p { margin: 0 0 8px; }
+  .step-text p:last-child { margin: 0; }
+  .step-text b { color: var(--ink); }
+
+  /* controls */
+  select, input[type="search"] { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { border: 0; background: none; padding: 5px 10px; cursor: pointer; font-size: 0.86rem; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 6px 10px; cursor: pointer; font-size: 0.86rem; }
+  .btn:hover { border-color: var(--accent); }
+  .ctl { display: grid; gap: 4px; margin-bottom: 10px; }
+  .ctl label { font-size: 0.9rem; }
+
+  /* player */
+  .player { padding: 0; overflow: hidden; }
+  .player video { display: block; width: 100%; aspect-ratio: 960 / 400; background: #000; }
+  .moment { padding: 10px 14px 12px; display: grid; gap: 6px; border-top: 1px solid var(--line); }
+  .moment .row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; font-size: 0.92rem; }
+  .moment .k { color: var(--ink-3); font-size: 0.8rem; padding-top: 2px; }
+  .moment .v { color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .moment .v .now { background: var(--accent-soft); border-radius: 3px; padding: 0 2px; }
+  .moment .v.muted { color: var(--ink-3); }
+  .clock { font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); }
+
+  /* lanes */
+  .lanebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .lanes { display: grid; gap: 2px; }
+  .group { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 8px 0 2px; }
+  .group:first-child { margin-top: 0; }
+  .lane { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 10px; align-items: center; }
+  .lane-head { display: grid; gap: 0; min-width: 0; }
+  .lane-head .ln { font-size: 0.88rem; font-weight: 600; display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+  .lane-head .ln span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lane-head .lm { font-size: 0.72rem; color: var(--ink-3); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lane-head output { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-2); margin-left: auto; flex: none; }
+  .lane canvas { display: block; width: 100%; height: 40px; cursor: pointer; touch-action: pan-y; }
+  .lane .x { border: 0; background: none; color: var(--ink-3); cursor: pointer; padding: 0 2px; font-size: 0.9rem; line-height: 1; }
+  .lane .x:hover { color: var(--ink); }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; display: inline-block; }
+
+  /* explore */
+  .results { display: grid; gap: 2px; max-height: 260px; overflow-y: auto; margin-top: 6px; }
+  .results button {
+    text-align: left; border: 1px solid transparent; background: none; border-radius: 6px; padding: 4px 6px; cursor: pointer;
+    display: grid; gap: 0; font-size: 0.86rem; min-width: 0;
+  }
+  .results button:hover { background: var(--accent-soft); }
+  .results .rm { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-3); overflow-wrap: anywhere; }
+
+  /* compare + trajectory */
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  .figure { position: relative; }
+  .figure canvas { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 340px; cursor: crosshair; touch-action: pan-y; }
+  .bigr { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 600; }
+  .note { font-size: 0.86rem; color: var(--ink-2); margin: 6px 0 0; }
+  .notice { background: var(--warn-bg); color: var(--warn-ink); padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; }
+  .tip {
+    position: fixed; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-mono);
+    font-size: 0.76rem; padding: 5px 8px; border-radius: 6px; white-space: nowrap; z-index: 5;
+  }
+
+  /* credits */
+  footer.about { max-width: 1280px; margin: 8px auto 0; color: var(--ink-3); font-size: 0.86rem; display: grid; gap: 8px; }
+  footer.about p { margin: 0; max-width: 90ch; }
+  details.credits summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+  .tablewrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; font-size: 0.8rem; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-2); font-weight: 600; }
+  td { color: var(--ink-2); }
+  td:first-child { font-family: var(--font-mono); color: var(--ink); white-space: nowrap; }
+
+  @media (max-width: 900px) {
+    .bench { display: flex; flex-direction: column; }
+    .side, .main { display: contents; }
+    #p-player { order: 1; } #p-try { order: 2; } #p-lanes { order: 3; } #p-cmp { order: 4; } #p-explore { order: 5; }
+    .two { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .lane { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .moment .row { grid-template-columns: 84px minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brandline">
+      <h1>Features over time</h1>
+      <span class="badge">Real film · computed features</span>
+    </div>
+    <p class="lede">A film is a stream of images, sounds and words. Computer models can turn that stream into numbers: how bright the picture is, how many faces it holds, how loud the sound is, how surprising each word is. Each number, measured every half second, is a <b>feature</b>. Play the film and watch its features change with it.</p>
+    <nav class="series" aria-label="Pages in this series">
+      <span>1 · What a feature is (next)</span>
+      <span class="current" aria-current="page">2 · Features over time</span>
+      <a href="index.html">3 · Synthetic Cortex</a>
+    </nav>
+  </header>
+
+  <div class="notice" id="nodata" hidden>The feature data did not load, so only the film is shown. If you are running the site locally, fetch the media first (see the README).</div>
+
+  <div class="bench">
+    <div class="side">
+      <section class="panel" id="p-try" aria-labelledby="h-try">
+        <h2 id="h-try">Try this</h2>
+        <div class="steps" id="steps"></div>
+        <div class="step-text" id="step-text" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" id="p-explore" aria-labelledby="h-explore">
+        <h2 id="h-explore">Add any feature</h2>
+        <p class="hint" style="margin:0 0 6px" id="explore-count"></p>
+        <input type="search" id="q" placeholder="Search, e.g. car, music, fear, happy" aria-label="Search features" autocomplete="off">
+        <div class="results" id="results"></div>
+      </section>
+    </div>
+
+    <div class="main">
+      <section class="panel player" id="p-player" aria-label="The film">
+        <video id="film" controls playsinline preload="metadata" src="media/tears-of-steel-960.mp4"></video>
+        <div class="moment" id="moment">
+          <div class="row"><div class="k">Time</div><div class="v clock" id="m-time">0:00.0</div></div>
+          <div class="row"><div class="k">Caption model</div><div class="v" id="m-cap">–</div></div>
+          <div class="row"><div class="k">Scene model</div><div class="v" id="m-scene">–</div></div>
+          <div class="row"><div class="k">Speech model</div><div class="v" id="m-words">–</div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="p-lanes" aria-labelledby="h-lanes">
+        <div class="lanebar">
+          <h2 id="h-lanes" style="margin:0">Features</h2>
+          <div class="seg" role="group" aria-label="Time window">
+            <button type="button" id="win-all" aria-pressed="true">Whole film</button>
+            <button type="button" id="win-60" aria-pressed="false">60 seconds</button>
+          </div>
+        </div>
+        <div class="lanes" id="lanes"></div>
+        <p class="hint" style="margin:8px 0 0">Click any lane to jump the film to that moment. Each lane is scaled from its own lowest to its highest value in this film.</p>
+      </section>
+
+      <section class="panel" id="p-cmp" aria-labelledby="h-cmp">
+        <h2 id="h-cmp">Do two features go together?</h2>
+        <div class="two">
+          <div>
+            <div class="ctl"><label for="cmp-a">Feature A</label><select id="cmp-a"></select></div>
+            <div class="ctl"><label for="cmp-b">Feature B</label><select id="cmp-b"></select></div>
+            <div><span class="bigr" id="cmp-r">r = –</span></div>
+            <p class="note" id="cmp-note"></p>
+          </div>
+          <div>
+            <div class="seg" role="group" aria-label="Embedding" style="margin-bottom:6px">
+              <button type="button" data-proj="visual" aria-pressed="true">Picture</button>
+              <button type="button" data-proj="audio" aria-pressed="false">Sound</button>
+              <button type="button" data-proj="text" aria-pressed="false">Words</button>
+            </div>
+            <div class="figure"><canvas id="traj" aria-label="Map of moments: each dot is one moment, placed so that moments a model describes alike sit close together"></canvas></div>
+            <p class="note" id="traj-note"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="about">
+    <p><b>The film.</b> <i>Tears of Steel</i> (2012), (CC) Blender Foundation | <a href="https://mango.blender.org">mango.blender.org</a>, under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. Shown in full, credits included, re-encoded to 960 × 400 for the web. The separately released soundtrack is (C) Joram Letwory, <a href="https://www.tearsofsteel.org">tearsofsteel.org</a>; the film's own mixed audio is covered by the film's licence.</p>
+    <p><b>How the features were made.</b> Every feature was computed from the full-resolution film with the open-source packages <a href="https://github.com/hulacon/viz2psy">viz2psy</a> (pictures), <a href="https://github.com/hulacon/aud2psy">aud2psy</a> (sound) and <a href="https://github.com/hulacon/word2psy">word2psy</a> (words), on a half-second grid, and collected by <a href="https://github.com/hulacon/psytwill">psytwill</a>. The words come from a speech-recognition model, not the script, so some lines are missing or wrong. Models make mistakes: when a lane disagrees with what you see, the model is usually the one that is wrong.</p>
+    <p><b>Embeddings.</b> Some models describe a moment with hundreds of numbers at once (an embedding). This page never shows those numbers; it shows only a two-dimensional map of how similar the moments are (multidimensional scaling).</p>
+    <details class="credits" id="credits">
+      <summary>Models behind this page, and their licences</summary>
+      <p class="hint" style="margin:6px 0 0">Model weights are not redistributed here; the page shows only numbers the models computed on an openly licensed film. Several models carry non-commercial, research-use or share-alike terms, which this free, non-commercial teaching site follows.</p>
+      <div class="tablewrap"><table><thead><tr><th>Model</th><th>What it measures</th><th>Made by / weights</th><th>Terms</th></tr></thead><tbody id="credit-rows"></tbody></table></div>
+    </details>
+    <p>Code: MIT license, <a href="https://github.com/jhutchin/brainfeatures">source on GitHub</a>.</p>
+  </footer>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script src="data/tears-of-steel.js"></script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const FILM = (window.PSYTWILL_VIZ && window.PSYTWILL_VIZ.films || {})["tears-of-steel"] || null;
+const video = $("film");
+
+// ------------------------------------------------------------ credits (every model the page reads)
+
+const CREDITS = {
+  // viz2psy: pictures
+  llstat: ["Low-level image statistics: brightness, colour, contrast, edges", "computed directly (NumPy, scikit-image)", "no model weights"],
+  motion: ["Optical flow between frames: how much the picture moves", "computed directly (OpenCV Farnebäck)", "no model weights"],
+  faces: ["Faces found in the frame, and their size", "YuNet (OpenCV Zoo)", "weights MIT; trained on WIDER FACE (CC BY-NC-ND)"],
+  places: ["Scene category (365 kinds) and 102 scene attributes", "Places365 WideResNet-18 (MIT CSAIL)", "CC BY per the model README; the Places site limits use to research and education"],
+  depth: ["Scene layout from estimated depth: open vs enclosed, near vs far", "Depth Anything V2 Small", "weights Apache-2.0; training data includes research-only sets (SA-1B, ImageNet-21K)"],
+  yolo: ["Counts of 80 kinds of object (people, cars, cups…)", "YOLOv8n (Ultralytics)", "AGPL-3.0; trained on COCO"],
+  aesthetics: ["Predicted aesthetic rating of the frame", "LAION improved aesthetic predictor on OpenAI CLIP ViT-L/14", "head Apache-2.0; CLIP MIT"],
+  context_affect: ["Pleasantness and arousal inferred from the scene", "ridge probe on OpenAI CLIP ViT-L/14, trained on VEATIC", "CLIP MIT; VEATIC for research purposes"],
+  experiential: ["65 experiential attributes of what is depicted (Binder et al., 2016)", "ridge probe on OpenAI CLIP ViT-L/14, trained on THINGS photos", "CLIP MIT; THINGS images research and education only; Binder ratings, citation requested"],
+  emonet: ["20 emotion categories a scene evokes", "EmoNet (Kragel et al., 2019)", "no licence found for the weights"],
+  resmem: ["Predicted memorability of the frame", "ResMem (Brain Bridge Lab)", "ResMem non-commercial licence"],
+  clip: ["Embedding of the picture (512 numbers; shown only as a map)", "OpenCLIP ViT-B/32 (LAION-2B)", "MIT"],
+  caption: ["One-sentence description of the frame", "BLIP large (Salesforce)", "BSD-3-Clause"],
+  // aud2psy: sound
+  loudness: ["Loudness of the soundtrack (RMS energy, dB)", "computed directly (librosa)", "no model weights"],
+  psychoacoustic: ["Perceived loudness, sharpness, roughness", "computed directly (MoSQITo)", "no model weights"],
+  spectral: ["Spectral shape: brightness of the sound, noisiness", "computed directly (librosa)", "no model weights"],
+  timbre: ["Timbre: MFCCs, spectral contrast, flatness", "computed directly (librosa)", "no model weights"],
+  onsets: ["Sound onsets: how often new sounds start; tempo", "computed directly (librosa)", "no model weights"],
+  rhythm: ["Pulse clarity, beat strength, novelty", "computed directly (librosa)", "no model weights"],
+  tonal: ["Musical key clarity, major vs minor, chroma entropy", "computed directly (librosa)", "no model weights"],
+  pitch: ["Voice pitch (F0) and how likely the sound is voiced", "computed directly (librosa pYIN)", "no model weights"],
+  beats: ["Musical beats and downbeats", "Beat This! (JKU Linz)", "MIT"],
+  speech: ["Probability that someone is speaking", "Silero VAD", "MIT"],
+  diarize: ["Who speaks when (speaker turns)", "pyannote speaker-diarization community-1", "CC BY 4.0"],
+  conversation: ["Talk in each window: share with speech, turns, overlap", "derived from the speaker turns", "inherits pyannote (CC BY 4.0)"],
+  transcribe: ["Time-stamped words (speech recognition)", "Whisper large-v3 (faster-whisper)", "MIT; OpenAI weights Apache-2.0"],
+  speech_rate: ["Words per second, word duration, pauses", "derived from the transcript", "inherits Whisper (MIT)"],
+  speech_emotion: ["Arousal, dominance, valence of the voice", "audEERING wav2vec2 (MSP-Podcast)", "CC BY-NC-SA 4.0"],
+  sound_events: ["16 kinds of sound event (music, vehicle, footsteps…), zero-shot", "LAION CLAP (larger music and speech)", "Apache-2.0; LAION-Audio-630K research only"],
+  music_emotion: ["Musical valence and arousal", "ridge probe on LAION CLAP, trained on DEAM", "probe MIT; CLAP training audio research only; DEAM CC BY-NC"],
+  clap: ["Embedding of the sound (512 numbers; shown only as a map)", "LAION CLAP (larger music and speech)", "Apache-2.0; LAION-Audio-630K research only"],
+  // word2psy: words
+  gpt2_surprisal: ["How surprising each word is, given the words before it", "GPT-2 (OpenAI)", "MIT"],
+  sentiment: ["Negative, neutral, positive tone of each line", "Twitter-RoBERTa sentiment (Cardiff NLP)", "CC BY 4.0"],
+  emotion: ["28 emotions expressed in each line (GoEmotions)", "RoBERTa GoEmotions (SamLowe)", "MIT"],
+  interaction: ["Social talk: questions, “you”, “we”, people nouns", "closed word lists", "no model weights"],
+  readability: ["Readability formulas", "computed directly (textstat)", "no model weights"],
+  wordform: ["Word length, syllables, phonemes, neighbourhood", "CMUdict + wordfreq", "CMUdict BSD-style; wordfreq data CC BY-SA 4.0"],
+  lexical_norms: ["Predicted word ratings: concreteness, arousal, age of acquisition…", "ridge regressors on fastText vectors", "fastText CC BY-SA 3.0; targets include NRC VAD (non-commercial)"],
+  lexical_norms_experiential: ["Binder experiential attributes of words", "ridge probe on fastText vectors", "fastText CC BY-SA 3.0; Binder ratings, citation requested"],
+  fasttext: ["Embedding of the words (300 numbers; shown only as a map)", "fastText crawl-300d-2M-subword (Meta)", "CC BY-SA 3.0"],
+  word2vec: ["Word embedding (300 numbers; not shown)", "word2vec Google News", "no licence found for the vectors"],
+};
+const PKG = {};
+"llstat motion faces places depth yolo aesthetics context_affect experiential emonet resmem clip caption".split(" ").forEach((m) => PKG[m] = "viz2psy");
+"loudness psychoacoustic spectral timbre onsets rhythm tonal pitch beats speech diarize conversation transcribe speech_rate speech_emotion sound_events music_emotion clap".split(" ").forEach((m) => PKG[m] = "aud2psy");
+"gpt2_surprisal sentiment emotion interaction readability wordform lexical_norms lexical_norms_experiential fasttext word2vec".split(" ").forEach((m) => PKG[m] = "word2psy");
+
+// ------------------------------------------------------------ curated lanes
+// The eight features page 3 simulates, measured on the real film, plus three more.
+
+const CURATED = [
+  { f: "llstat_luminance_mean", name: "Brightness", unit: "", fmt: 2, page3: "Brightness" },
+  { f: "motion_energy", name: "Visual motion", unit: "", fmt: 2, page3: "Visual motion" },
+  { f: "faces_count", name: "Faces", unit: " faces", fmt: 0, page3: "Faces" },
+  { f: "sunattr_open_area", alt: "depth_openness", name: "Open space", unit: "", fmt: 2, page3: "Places" },
+  { f: "context_affect_valence", name: "Scene pleasantness", unit: "", fmt: 2, page3: "Pleasantness" },
+  { f: "loudness_db", name: "Loudness", unit: " dB", fmt: 0, page3: "Loudness" },
+  { f: "conversation_speech_fraction", name: "Speech", unit: "", fmt: 2, page3: "Speech" },
+  { f: "conversation_n_speakers", name: "Voices talking", unit: "", fmt: 1, page3: "Social interaction" },
+  { f: "sound_events_music", name: "Music", unit: "", fmt: 2 },
+  { f: "gpt2_surprisal", name: "Word surprise", unit: " bits", fmt: 1 },
+  { f: "sentiment_positive", name: "Positive tone", unit: "", fmt: 2 },
+];
+const MOD_NAME = { visual: "Picture", audio: "Sound", text: "Words" };
+const MOD_VAR = { visual: "--vis", audio: "--aud", text: "--txt" };
+
+// ------------------------------------------------------------ data access
+
+const SER = new Map();
+let WORDS = [], CHUNKS = [], SPK = [], CAPS = [], DUR = 734.25, SCENE = null, SCENE_NAMES = [];
+if (FILM) {
+  for (const s of FILM.series) SER.set(s.f, s);
+  WORDS = FILM.media.words || [];     // [onset, offset, chunk, index-in-chunk, text]
+  CHUNKS = FILM.media.chunks || [];   // [onset, offset, chunk, text]
+  SPK = FILM.media.speakers || [];    // [onset, offset, label]
+  CAPS = FILM.captions || [];         // [time, text] at change points
+  DUR = FILM.duration || DUR;
+}
+
+// last index i with arr[i][0] <= t (or with key(arr[i]) <= t)
+function bisect(arr, t, key) {
+  let lo = 0, hi = arr.length - 1, ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if ((key ? key(arr[mid]) : arr[mid][0]) <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return ans;
+}
+const num = (x) => (x === null || x === undefined ? NaN : x);
+
+function valueAt(s, t) {
+  if (s.align === "grid") {
+    const i = Math.round((t - s.t0) / s.dt);
+    return i >= 0 && i < s.v.length ? num(s.v[i]) : NaN;
+  }
+  if (s.align === "times") {
+    const i = bisect(s.t, t, (x) => x);
+    let best = NaN, bd = 0.5;
+    for (const j of [i, i + 1]) if (j >= 0 && j < s.t.length && Math.abs(s.t[j] - t) <= bd) { bd = Math.abs(s.t[j] - t); best = num(s.v[j]); }
+    return best;
+  }
+  if (s.align === "word") {
+    const i = bisect(WORDS, t);
+    return i >= 0 && t < WORDS[i][1] + 0.25 ? num(s.v[i]) : NaN;
+  }
+  if (s.align === "chunk") {
+    const i = bisect(CHUNKS, t);
+    return i >= 0 && t <= CHUNKS[i][1] ? num(s.v[i]) : NaN;
+  }
+  return NaN;
+}
+
+// (t, value) points of a series, for drawing
+function points(s) {
+  if (s._pts) return s._pts;
+  const out = [];
+  if (s.align === "grid") s.v.forEach((v, i) => out.push([s.t0 + i * s.dt, num(v)]));
+  else if (s.align === "times") s.t.forEach((t, i) => out.push([t, num(s.v[i])]));
+  else if (s.align === "word") WORDS.forEach((w, i) => out.push([w[0], num(s.v[i])]));
+  else if (s.align === "chunk") CHUNKS.forEach((c, i) => out.push([c[0], num(s.v[i]), c[1]]));
+  const vals = out.map((p) => p[1]).filter(Number.isFinite);
+  s._min = vals.length ? Math.min(...vals) : 0;
+  s._max = vals.length ? Math.max(...vals) : 1;
+  if (s._max === s._min) s._max = s._min + 1;
+  s._pts = out;
+  return out;
+}
+
+function prettyFeature(f, model) {
+  let rest = f;
+  if (f.startsWith(model + "_")) rest = f.slice(model.length + 1);
+  else if (f.startsWith("sunattr_")) rest = f.slice(8) + " (scene attribute)";
+  return rest.replace(/_/g, " ");
+}
+
+// Top scene category per visual frame (the 365 Places scene probabilities).
+function buildScenes() {
+  const cats = [...SER.values()].filter((s) => s.model === "places" && s.f.startsWith("places_") && s.align === "grid");
+  if (!cats.length) return;
+  SCENE_NAMES = cats.map((s) => s.f.slice(7).replace(/_/g, " "));
+  const n = cats[0].v.length;
+  SCENE = { t0: cats[0].t0, dt: cats[0].dt, idx: new Int16Array(n), p: new Float32Array(n) };
+  for (let i = 0; i < n; i++) {
+    let b = -1, bp = -Infinity;
+    for (let k = 0; k < cats.length; k++) { const v = cats[k].v[i]; if (v !== null && v > bp) { bp = v; b = k; } }
+    SCENE.idx[i] = b; SCENE.p[i] = bp;
+  }
+}
+
+// ------------------------------------------------------------ lanes
+
+const state = { win: "all", lanes: [], proj: "visual" };
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function laneDef(f, extra) {
+  const s = SER.get(f);
+  if (!s) return null;
+  return Object.assign({ f, s, name: prettyFeature(f, s.model), unit: "", fmt: 2, model: s.model, mod: s.m }, extra || {});
+}
+
+function windowRange(t) {
+  if (state.win === "all") return [0, DUR];
+  const half = 30;
+  let a = Math.max(0, t - half), b = a + 2 * half;
+  if (b > DUR) { b = DUR; a = Math.max(0, b - 2 * half); }
+  return [a, b];
+}
+
+function drawLane(L, t) {
+  const c = L.canvas, dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const [a, b] = windowRange(t);
+  const X = (tt) => ((tt - a) / (b - a)) * w;
+  const s = L.s, pts = points(s);
+  const pad = 3, Y = (v) => h - pad - ((v - s._min) / (s._max - s._min)) * (h - 2 * pad);
+  const col = css(MOD_VAR[L.mod] || "--ink-2");
+  g.strokeStyle = css("--line"); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(0, h - 0.5); g.lineTo(w, h - 0.5); g.stroke();
+  g.fillStyle = col; g.strokeStyle = col;
+  if (s.align === "grid") {
+    g.globalAlpha = 0.18; g.beginPath(); let open = false;
+    const area = [];
+    for (const [tt, v] of pts) {
+      if (tt < a - 1 || tt > b + 1) continue;
+      if (!Number.isFinite(v)) { if (area.length) { fillArea(g, area, h); area.length = 0; } continue; }
+      area.push([X(tt), Y(v)]);
+    }
+    if (area.length) fillArea(g, area, h);
+    g.globalAlpha = 1; g.lineWidth = 1.4; g.beginPath(); open = false;
+    for (const [tt, v] of pts) {
+      if (tt < a - 1 || tt > b + 1) continue;
+      if (!Number.isFinite(v)) { open = false; continue; }
+      if (!open) { g.moveTo(X(tt), Y(v)); open = true; } else g.lineTo(X(tt), Y(v));
+    }
+    g.stroke();
+  } else if (s.align === "chunk") {
+    g.lineWidth = 3;
+    for (const [t0, v, t1] of pts) {
+      if (!Number.isFinite(v) || t1 < a || t0 > b) continue;
+      g.beginPath(); g.moveTo(X(t0), Y(v)); g.lineTo(Math.max(X(t1), X(t0) + 2), Y(v)); g.stroke();
+    }
+  } else {
+    g.lineWidth = 1.2;
+    for (const [tt, v] of pts) {
+      if (!Number.isFinite(v) || tt < a || tt > b) continue;
+      const x = X(tt);
+      g.globalAlpha = 0.45; g.beginPath(); g.moveTo(x, h - 1); g.lineTo(x, Y(v)); g.stroke();
+      g.globalAlpha = 1; g.beginPath(); g.arc(x, Y(v), 1.8, 0, 6.283); g.fill();
+    }
+  }
+  // playhead
+  g.globalAlpha = 1; g.strokeStyle = css("--head"); g.lineWidth = 1.5;
+  const px = X(t); g.beginPath(); g.moveTo(px, 0); g.lineTo(px, h); g.stroke();
+}
+function fillArea(g, area, h) {
+  g.beginPath(); g.moveTo(area[0][0], h); for (const [x, y] of area) g.lineTo(x, y);
+  g.lineTo(area[area.length - 1][0], h); g.closePath(); g.fill();
+}
+
+function fmtVal(L, v) {
+  if (!Number.isFinite(v)) return "–";
+  return v.toFixed(L.fmt) + (L.unit || "");
+}
+
+function renderLanes() {
+  const box = $("lanes");
+  box.textContent = "";
+  let lastMod = null;
+  const order = ["visual", "audio", "text"];
+  const sorted = [...state.lanes].sort((x, y) => order.indexOf(x.mod) - order.indexOf(y.mod));
+  for (const L of sorted) {
+    if (L.mod !== lastMod) {
+      const gh = document.createElement("div"); gh.className = "group"; gh.textContent = MOD_NAME[L.mod] || L.mod;
+      box.appendChild(gh); lastMod = L.mod;
+    }
+    const row = document.createElement("div"); row.className = "lane";
+    const head = document.createElement("div"); head.className = "lane-head";
+    const ln = document.createElement("div"); ln.className = "ln";
+    const sw = document.createElement("i"); sw.className = "swatch"; sw.style.background = `var(${MOD_VAR[L.mod]})`;
+    const nm = document.createElement("span"); nm.textContent = L.name; nm.title = L.name;
+    const out = document.createElement("output"); L.out = out;
+    ln.append(sw, nm, out);
+    if (L.added) {
+      const x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "×";
+      x.setAttribute("aria-label", "Remove " + L.name);
+      x.onclick = () => { state.lanes = state.lanes.filter((m) => m !== L); renderLanes(); fillCompareSelects(); };
+      ln.appendChild(x);
+    }
+    const lm = document.createElement("div"); lm.className = "lm";
+    lm.textContent = `${L.model} · ${PKG[L.model] || ""}`; lm.title = L.f;
+    head.append(ln, lm);
+    const c = document.createElement("canvas");
+    c.setAttribute("role", "img");
+    c.setAttribute("aria-label", `${L.name} over the film`);
+    L.canvas = c;
+    c.addEventListener("click", (e) => seekFromCanvas(e, c));
+    c.addEventListener("mousemove", (e) => laneTip(e, L));
+    c.addEventListener("mouseleave", hideTip);
+    row.append(head, c);
+    box.appendChild(row);
+  }
+  tick(true);
+}
+
+function timeFromCanvas(e, c) {
+  const r = c.getBoundingClientRect();
+  const [a, b] = windowRange(video.currentTime || 0);
+  return a + ((e.clientX - r.left) / r.width) * (b - a);
+}
+function seekFromCanvas(e, c) {
+  const t = Math.max(0, Math.min(DUR - 0.05, timeFromCanvas(e, c)));
+  seek(t);
+}
+function seek(t) {
+  try { video.currentTime = t; } catch (_) { /* metadata not loaded yet */ }
+  pendingSeek = t; tick(true);
+}
+let pendingSeek = null;
+function nowT() {
+  const t = video.currentTime;
+  if (pendingSeek !== null && (!video.readyState || Math.abs(t - pendingSeek) > 0.6)) return pendingSeek;
+  pendingSeek = null;
+  return t || 0;
+}
+
+const tip = $("tip");
+function laneTip(e, L) {
+  const t = timeFromCanvas(e, L.canvas);
+  tip.textContent = `${clock(t)}  ${L.name}: ${fmtVal(L, valueAt(L.s, t))}`;
+  tip.hidden = false;
+  const x = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 12);
+  tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px";
+}
+function hideTip() { tip.hidden = true; }
+
+// ------------------------------------------------------------ the moment
+
+function clock(t) {
+  const m = Math.floor(t / 60), s = t - m * 60;
+  return `${m}:${s < 10 ? "0" : ""}${s.toFixed(1)}`;
+}
+
+function renderMoment(t) {
+  $("m-time").textContent = `${clock(t)} of ${clock(DUR)}`;
+  const ci = bisect(CAPS, t);
+  $("m-cap").textContent = ci >= 0 ? `“${CAPS[ci][1]}”` : "–";
+  if (SCENE) {
+    const i = Math.max(0, Math.min(SCENE.idx.length - 1, Math.round((t - SCENE.t0) / SCENE.dt)));
+    const k = SCENE.idx[i];
+    $("m-scene").textContent = k >= 0 ? `${SCENE_NAMES[k]} (${Math.round(SCENE.p[i] * 100)} % sure)` : "–";
+  }
+  const wEl = $("m-words");
+  const chi = bisect(CHUNKS, t), wiK = bisect(WORDS, t);
+  const key = `${chi}:${wiK}:${wiK >= 0 && t < WORDS[wiK][1] + 0.25}:${chi >= 0 && t <= CHUNKS[chi][1] + 0.4}`;
+  if (key === renderMoment.key) return;
+  renderMoment.key = key;
+  if (chi >= 0 && t <= CHUNKS[chi][1] + 0.4) {
+    const chunk = CHUNKS[chi][2];
+    const wi = bisect(WORDS, t);
+    wEl.textContent = "";
+    wEl.classList.remove("muted");
+    const spk = speakerAt(t);
+    if (spk) { const b = document.createElement("span"); b.className = "mono"; b.style.color = "var(--ink-3)"; b.textContent = spk + ": "; wEl.appendChild(b); }
+    WORDS.forEach((w, i) => {
+      if (w[2] !== chunk) return;
+      const sp = document.createElement("span");
+      sp.textContent = w[4];
+      if (i === wi && t < w[1] + 0.25) sp.className = "now";
+      wEl.append(sp, " ");
+    });
+  } else {
+    wEl.textContent = "(no words heard)";
+    wEl.classList.add("muted");
+  }
+}
+const VOICE = {};
+function speakerAt(t) {
+  const i = bisect(SPK, t);
+  if (i < 0 || t > SPK[i][1] + 0.3) return null;
+  const lab = SPK[i][2];
+  if (!(lab in VOICE)) VOICE[lab] = "Voice " + (Object.keys(VOICE).length + 1);
+  return VOICE[lab];
+}
+
+// ------------------------------------------------------------ clock loop
+
+let lastDrawT = -1, lastW = 0;
+function tick(force) {
+  const t = nowT();
+  const w = $("lanes").clientWidth;
+  if (!force && Math.abs(t - lastDrawT) < 1e-3 && w === lastW) return;
+  lastDrawT = t; lastW = w;
+  for (const L of state.lanes) {
+    drawLane(L, t);
+    if (L.out) L.out.textContent = fmtVal(L, valueAt(L.s, t));
+  }
+  renderMoment(t);
+  drawTraj(t);
+}
+function loop() { tick(false); requestAnimationFrame(loop); }
+
+// ------------------------------------------------------------ compare
+
+function sampleGrid(s) {
+  const out = new Float64Array(Math.floor(DUR / 0.5));
+  for (let k = 0; k < out.length; k++) out[k] = valueAt(s, k * 0.5 + 0.25);
+  return out;
+}
+function corr(a, b) {
+  let n = 0, sa = 0, sb = 0;
+  for (let i = 0; i < a.length; i++) if (Number.isFinite(a[i]) && Number.isFinite(b[i])) { n++; sa += a[i]; sb += b[i]; }
+  if (n < 3) return { r: NaN, n };
+  const ma = sa / n, mb = sb / n;
+  let xy = 0, xx = 0, yy = 0;
+  for (let i = 0; i < a.length; i++) if (Number.isFinite(a[i]) && Number.isFinite(b[i])) {
+    const x = a[i] - ma, y = b[i] - mb; xy += x * y; xx += x * x; yy += y * y;
+  }
+  return { r: xx && yy ? xy / Math.sqrt(xx * yy) : NaN, n };
+}
+function fillCompareSelects(aF, bF) {
+  const A = $("cmp-a"), B = $("cmp-b");
+  const keepA = aF || A.value, keepB = bF || B.value;
+  for (const sel of [A, B]) {
+    sel.textContent = "";
+    for (const L of state.lanes) {
+      const o = document.createElement("option"); o.value = L.f; o.textContent = `${L.name} (${MOD_NAME[L.mod]})`; sel.appendChild(o);
+    }
+  }
+  const has = (f) => state.lanes.some((L) => L.f === f);
+  A.value = has(keepA) ? keepA : (state.lanes[0] || {}).f;
+  B.value = has(keepB) ? keepB : (state.lanes[1] || {}).f;
+  compare();
+}
+function compare() {
+  const LA = state.lanes.find((L) => L.f === $("cmp-a").value), LB = state.lanes.find((L) => L.f === $("cmp-b").value);
+  if (!LA || !LB) return;
+  const { r, n } = corr(sampleGrid(LA.s), sampleGrid(LB.s));
+  $("cmp-r").textContent = Number.isFinite(r) ? `r = ${r >= 0 ? "+" : "−"}${Math.abs(r).toFixed(2)}` : "r = –";
+  const half = n.toLocaleString("en-US");
+  let msg;
+  if (!Number.isFinite(r)) msg = "Too few moments where both features have a value.";
+  else {
+    const size = Math.abs(r) < 0.1 ? "barely related" : Math.abs(r) < 0.3 ? "weakly related" : Math.abs(r) < 0.6 ? "moderately related" : "strongly related";
+    msg = `Over ${half} half-seconds where both have a value, ${LA.name.toLowerCase()} and ${LB.name.toLowerCase()} are ${size}` +
+      (Math.abs(r) >= 0.1 ? (r > 0 ? ": when one is high, the other tends to be high too." : ": when one is high, the other tends to be low.") : ".");
+  }
+  $("cmp-note").textContent = msg;
+  state.lastR = { a: LA, b: LB, r };
+}
+
+// ------------------------------------------------------------ trajectory (MDS map of an embedding)
+
+const PROJ_TEXT = {
+  visual: "Picture embedding (CLIP, 512 numbers per frame), squeezed onto a 2D map. Frames from the same shot cluster; a cut jumps across the map.",
+  audio: "Sound embedding (CLAP, 512 numbers per half second). Music, speech and effects fall in different regions.",
+  text: "Word embedding (fastText, 300 numbers per word). Each dot is a word; words with related meanings sit together.",
+};
+function projData() {
+  const p = FILM && (FILM.proj || []).find((q) => q.m === state.proj);
+  if (!p) return null;
+  if (!p._t) {
+    // word-aligned maps carry one point per payload word (null where a word has no vector)
+    const T = [], XY = [];
+    p.xy.forEach((xy, i) => {
+      const t = p.t ? p.t[i] : (WORDS[i] || [NaN])[0];
+      if (xy && Number.isFinite(t)) { T.push(t); XY.push(xy); }
+    });
+    p._t = T; p._xy = XY;
+  }
+  return p;
+}
+function drawTraj(t) {
+  const c = $("traj"), p = projData();
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w || !h) return;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  g.strokeStyle = css("--line"); g.strokeRect(0.5, 0.5, w - 1, h - 1);
+  if (!p) return;
+  if (!p._box) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const [x, y] of p._xy) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    p._box = [x0, x1, y0, y1];
+  }
+  const [x0, x1, y0, y1] = p._box, pad = 10, sc = Math.min((w - 2 * pad) / (x1 - x0), (h - 2 * pad) / (y1 - y0));
+  const ox = (w - sc * (x1 - x0)) / 2, oy = (h - sc * (y1 - y0)) / 2;
+  p._map = (x, y) => [ox + (x - x0) * sc, oy + (y1 - y) * sc];
+  const col = css(MOD_VAR[state.proj]), faint = css("--ink-3");
+  const iNow = bisect(p._t, t, (x) => x);
+  for (let i = 0; i < p._xy.length; i++) {
+    const [X, Y] = p._map(p._xy[i][0], p._xy[i][1]);
+    const past = i <= iNow;
+    g.globalAlpha = past ? 0.8 : 0.22; g.fillStyle = past ? col : faint;
+    g.beginPath(); g.arc(X, Y, 1.9, 0, 6.283); g.fill();
+  }
+  // the last ten seconds as a path
+  g.globalAlpha = 0.9; g.strokeStyle = col; g.lineWidth = 1.2; g.beginPath();
+  let started = false;
+  for (let i = Math.max(0, iNow - 40); i <= iNow; i++) {
+    if (p._t[i] < t - 10) continue;
+    const [X, Y] = p._map(p._xy[i][0], p._xy[i][1]);
+    if (!started) { g.moveTo(X, Y); started = true; } else g.lineTo(X, Y);
+  }
+  g.stroke();
+  if (iNow >= 0) {
+    const [X, Y] = p._map(p._xy[iNow][0], p._xy[iNow][1]);
+    g.globalAlpha = 1; g.strokeStyle = css("--head"); g.lineWidth = 2;
+    g.beginPath(); g.arc(X, Y, 6, 0, 6.283); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+function trajNearest(e) {
+  const p = projData(); if (!p || !p._map) return -1;
+  const r = $("traj").getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  let best = -1, bd = 14 * 14;
+  for (let i = 0; i < p._xy.length; i++) {
+    const [X, Y] = p._map(p._xy[i][0], p._xy[i][1]); const d = (X - mx) ** 2 + (Y - my) ** 2;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function setProj(m) {
+  state.proj = m;
+  document.querySelectorAll("[data-proj]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.proj === m)));
+  $("traj-note").textContent = PROJ_TEXT[m] + " Click a dot to jump there.";
+  tick(true);
+}
+
+// ------------------------------------------------------------ explore
+
+function searchFeatures(q) {
+  const box = $("results"); box.textContent = "";
+  q = q.trim().toLowerCase();
+  if (!q) return;
+  const terms = q.split(/\s+/);
+  const hits = [];
+  for (const s of SER.values()) {
+    const name = prettyFeature(s.f, s.model);
+    const hay = `${name} ${s.model} ${s.f} ${(CREDITS[s.model] || [""])[0]}`.toLowerCase();
+    if (terms.every((x) => hay.includes(x))) hits.push([s, name]);
+    if (hits.length >= 60) break;
+  }
+  if (!hits.length) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "No feature matches."; box.appendChild(p); return; }
+  for (const [s, name] of hits) {
+    const b = document.createElement("button"); b.type = "button";
+    const t = document.createElement("span"); t.textContent = `${name}`;
+    const m = document.createElement("span"); m.className = "rm"; m.textContent = `${MOD_NAME[s.m]} · ${s.model} (${PKG[s.model] || ""})`;
+    b.append(t, m);
+    b.onclick = () => addLane(s.f);
+    box.appendChild(b);
+  }
+}
+function addLane(f, extra) {
+  if (state.lanes.some((L) => L.f === f)) return;
+  const L = laneDef(f, Object.assign({ added: true }, extra || {}));
+  if (!L) return;
+  state.lanes.push(L); renderLanes(); fillCompareSelects();
+  L.canvas && L.canvas.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+// ------------------------------------------------------------ credits table
+
+function renderCredits() {
+  const used = new Set(["caption", "transcribe", "diarize"]);
+  for (const s of SER.values()) used.add(s.model);
+  for (const p of (FILM && FILM.proj) || []) used.add(p.model);
+  const order = ["viz2psy", "aud2psy", "word2psy"];
+  const rows = [...used].sort((a, b) => (order.indexOf(PKG[a]) - order.indexOf(PKG[b])) || a.localeCompare(b));
+  const tb = $("credit-rows");
+  for (const m of rows) {
+    const c = CREDITS[m] || ["–", "–", "terms not recorded"];
+    if (!CREDITS[m]) console.warn("no credit entry for model", m);
+    const tr = document.createElement("tr");
+    for (const v of [`${m} (${PKG[m] || "?"})`, c[0], c[1], c[2]]) { const td = document.createElement("td"); td.textContent = v; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+}
+
+// ------------------------------------------------------------ steps
+
+function rFor(a, b) {
+  const A = SER.get(a), B = SER.get(b);
+  return A && B ? corr(sampleGrid(A), sampleGrid(B)).r : NaN;
+}
+const sgn = (r) => Number.isFinite(r) ? `${r >= 0 ? "+" : "−"}${Math.abs(r).toFixed(2)}` : "–";
+
+const STEPS = [
+  {
+    t: "A feature is a number for every moment",
+    go() { setWin("all"); },
+    html: () => `<p>Press play. The line on each lane is one feature, and the dark mark is now. <b>Brightness</b> is just the average pixel value of each frame; <b>Loudness</b> is the energy of the sound. Neither needs any knowledge of what is happening.</p><p>Click a lane where a feature peaks, then look at the film to see what made it peak.</p>`,
+  },
+  {
+    t: "Fast features, slow features",
+    go() { setWin("60"); },
+    html: () => {
+      const keep = (f) => { const s = SER.get(f); if (!s) return NaN; const a = sampleGrid(s); return corr(a.slice(0, -10), a.slice(10)).r; };
+      const m = keep("sound_events_music"), sp = keep("conversation_speech_fraction"), mo = keep("motion_energy");
+      return `<p>The view now shows the 60 seconds around the playhead. Some features change within a second: <b>Speech</b> starts and stops with each line, and <b>Visual motion</b> with each camera move. Others hold for much longer: <b>Music</b> runs for tens of seconds at a time.</p><p>One way to measure this is to ask how well a feature predicts itself five seconds later. In this film, the answer is r = ${sgn(m)} for music, ${sgn(mo)} for motion and ${sgn(sp)} for speech.</p><p>A brain region that tracks a slow feature responds differently from one that tracks a fast one, and that difference helps a study tell features apart.</p>`;
+    },
+  },
+  {
+    t: "Some features need a trained model",
+    go() { setWin("all"); },
+    html: () => `<p><b>Faces</b>, the <b>scene model</b>'s guess and the <b>caption</b> under the film come from neural networks trained on millions of labelled examples. They are often right, and sometimes confidently wrong.</p><p>Watch a minute and compare the caption and scene with what you see. A wrong feature still gets used in an analysis, so its errors become the analysis's errors.</p>`,
+  },
+  {
+    t: "Features travel together",
+    go() { setWin("all"); setCompare("faces_count", "conversation_speech_fraction"); },
+    html: () => {
+      const r = rFor("faces_count", "conversation_speech_fraction");
+      return `<p>In films, things happen together. When someone speaks, the camera usually shows a face. In this film, <b>Faces</b> and <b>Speech</b> correlate at <b>r = ${sgn(r)}</b> (the panel below).</p><p>That matters for brain mapping. If a model includes faces but leaves out speech, any brain response to speech can be credited to faces. Page 3 lets you try this: <a href="index.html">open Synthetic Cortex</a>, set <i>Faces come with speech</i> near ${Number.isFinite(r) ? Math.abs(r).toFixed(2) : "this value"}, and untick Speech in the model.</p>`;
+    },
+  },
+  {
+    t: "Hundreds of features at once",
+    go() { setProj("visual"); $("p-cmp").scrollIntoView({ block: "nearest", behavior: "smooth" }); },
+    html: () => `<p>Some models describe a moment with hundreds of numbers, an <b>embedding</b>. No single number means much, but moments that look alike get similar embeddings.</p><p>The map beside the comparison squeezes those numbers onto two dimensions. Play the film and watch the ring: it rests within a shot and leaps at a cut. Switch to <b>Sound</b> or <b>Words</b> to see the same film through another model.</p>`,
+  },
+  {
+    t: "Explore",
+    go() { $("q").focus(); },
+    html: () => `<p>This film has <b>${SER.size.toLocaleString("en-US")}</b> feature series from <b>${new Set([...SER.values()].map((s) => s.model)).size}</b> models. Search for one in <i>Add any feature</i>, for example <i>car</i>, <i>fear</i>, <i>music</i> or <i>concreteness</i>, and compare it with the others.</p><p>Every model, what it measures and its licence are listed at the bottom of the page.</p>`,
+  },
+];
+let stepI = 0;
+function renderSteps() {
+  const box = $("steps"); box.textContent = "";
+  STEPS.forEach((s, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "step";
+    b.setAttribute("aria-current", String(i === stepI));
+    const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
+    const t = document.createElement("span"); t.className = "t"; t.textContent = s.t;
+    b.append(n, t);
+    b.onclick = () => { stepI = i; renderSteps(); s.go(); };
+    box.appendChild(b);
+  });
+  $("step-text").innerHTML = STEPS[stepI].html();
+}
+function setWin(w) {
+  state.win = w;
+  $("win-all").setAttribute("aria-pressed", String(w === "all"));
+  $("win-60").setAttribute("aria-pressed", String(w === "60"));
+  tick(true);
+}
+function setCompare(a, b) { fillCompareSelects(a, b); }
+
+// ------------------------------------------------------------ boot
+
+function boot() {
+  if (!FILM) { $("nodata").hidden = false; $("p-lanes").hidden = true; $("p-cmp").hidden = true; $("p-explore").hidden = true; $("p-try").hidden = true; return; }
+  buildScenes();
+  for (const c of CURATED) {
+    const f = SER.has(c.f) ? c.f : (c.alt && SER.has(c.alt) ? c.alt : null);
+    if (!f) { console.warn("curated feature missing", c.f); continue; }
+    state.lanes.push(laneDef(f, { name: c.name, unit: c.unit, fmt: c.fmt }));
+  }
+  $("explore-count").textContent = `${SER.size.toLocaleString("en-US")} feature series, from pictures, sound and words.`;
+  renderLanes();
+  fillCompareSelects("faces_count", "conversation_speech_fraction");
+  renderCredits();
+  renderSteps();
+  setProj("visual");
+  $("win-all").onclick = () => setWin("all");
+  $("win-60").onclick = () => setWin("60");
+  $("cmp-a").onchange = compare; $("cmp-b").onchange = compare;
+  document.querySelectorAll("[data-proj]").forEach((b) => b.onclick = () => setProj(b.dataset.proj));
+  let qTimer = null;
+  $("q").addEventListener("input", (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => searchFeatures(e.target.value), 120); });
+  const traj = $("traj");
+  traj.addEventListener("click", (e) => { const i = trajNearest(e); if (i >= 0) seek(projData()._t[i]); });
+  traj.addEventListener("mousemove", (e) => {
+    const i = trajNearest(e), p = projData();
+    if (i < 0) { hideTip(); return; }
+    let label = clock(p._t[i]);
+    if (state.proj === "text") { const wi = bisect(WORDS, p._t[i] + 1e-6); if (wi >= 0) label += `  “${WORDS[wi][4]}”`; }
+    tip.textContent = label; tip.hidden = false;
+    tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 12) + "px"; tip.style.top = (e.clientY + 14) + "px";
+  });
+  traj.addEventListener("mouseleave", hideTip);
+  window.addEventListener("resize", () => tick(true));
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", () => tick(true));
+  new MutationObserver(() => tick(true)).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  video.addEventListener("loadedmetadata", () => { if (pendingSeek !== null) { try { video.currentTime = pendingSeek; } catch (_) {} } });
+  requestAnimationFrame(loop);
+}
+boot();
+</script>

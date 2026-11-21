@@ -1,0 +1,3 @@
+path	release	name	sha256	what
+media/tears-of-steel-960.mp4	media-v1	tears-of-steel-960.mp4	ccb248efc7c75b94c42466ca0b1e5a5c5264b8bb571e287ad2393fefec762ab5	Tears of Steel (CC BY 3.0, Blender Foundation), re-encoded 960x400 H.264 CRF 27 + AAC 96k
+data/tears-of-steel.js	media-v1	tears-of-steel.js	56e2c2e0bf1c7f08a0c47b69f2100aa7343732395f44ed041612843e5166af8c	psytwill viz movies payload for the film (feature series, captions, transcript, speaker turns, 2D maps)
