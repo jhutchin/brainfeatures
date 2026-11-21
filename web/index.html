@@ -109,6 +109,16 @@
   .seg button { border: 0; background: none; padding: 5px 10px; cursor: pointer; font-size: 0.86rem; }
   .seg button + button { border-left: 1px solid var(--line); }
   .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  [hidden] { display: none !important; }
+  .seg.full { display: flex; margin-bottom: 12px; }
+  .seg.full button { flex: 1; }
+  .filminfo { font-size: 0.86rem; color: var(--ink-2); display: grid; gap: 6px; margin-bottom: 12px; }
+  .filminfo p { margin: 0; }
+  .pairs { display: grid; gap: 3px; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 8px; align-items: center; font-size: 0.84rem; }
+  .pair .pt { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--line); }
+  .pair .pt i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .pair output { font-family: var(--font-mono); text-align: right; color: var(--ink); }
   .btn {
     border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 6px 10px; cursor: pointer; font-size: 0.86rem;
   }
@@ -194,7 +204,16 @@
 
       <section class="panel" id="p-exp" aria-labelledby="h-exp">
         <h2 id="h-exp">The experiment</h2>
-        <div class="ctl">
+        <div class="seg full" role="group" aria-label="Stimulus">
+          <button type="button" id="stim-trials" aria-pressed="true">Random clips</button>
+          <button type="button" id="stim-film" aria-pressed="false">A real film</button>
+        </div>
+        <div class="filminfo" id="filminfo" hidden>
+          <p>One viewing of <i>Tears of Steel</i> (12 min). Every feature's value comes from the film itself, moment by moment: the same numbers as on <a href="film.html" style="color:var(--accent)">page 2</a>. Nobody chose how they correlate.</p>
+          <div class="pairs" id="pairs"></div>
+          <p class="hint">Correlations of the model's columns, after the slow hemodynamic response. Faces = a face on screen; Social interaction = voices talking (from who speaks when).</p>
+        </div>
+        <div class="ctl" id="ctl-trials">
           <label for="trials">Trials <output id="trials-out" class="mono"></output></label>
           <input id="trials" type="range" min="30" max="160" step="10" value="80">
           <span class="hint">2-second clips, 2–6 s apart, one run.</span>
@@ -204,7 +223,7 @@
           <input id="noise" type="range" min="0.25" max="2" step="0.05" value="0.5">
           <span class="hint">Standard deviation of the noise, in % signal change.</span>
         </div>
-        <div class="ctl">
+        <div class="ctl" id="ctl-corr">
           <label for="corr">Faces come with speech <output id="corr-out" class="mono"></output></label>
           <input id="corr" type="range" min="0" max="0.9" step="0.05" value="0">
           <span class="hint" id="corr-hint">In this run, faces and speech correlate at r = 0.00.</span>
@@ -291,7 +310,7 @@
   </div>
 
   <footer class="about">
-    <p><b>How this brain was made.</b> Each feature drives one or more smooth patches of cortex, placed on named regions of an anatomical atlas. Every trial is a short clip with a value for each feature. The simulated signal adds up each feature's patch times its value, filtered through a standard hemodynamic response. Slow drift and noise are added on top. The analysis is an ordinary general linear model at every point, with a high-pass filter for the drift.</p>
+    <p><b>How this brain was made.</b> Each feature drives one or more smooth patches of cortex, placed on named regions of an anatomical atlas. Every trial is a short clip with a value for each feature. The simulated signal adds up each feature's patch times its value, filtered through a standard hemodynamic response. Slow drift and noise are added on top. The analysis is an ordinary general linear model at every point, with a high-pass filter for the drift. In <b>A real film</b>, the trials are replaced by one viewing of <i>Tears of Steel</i>: each feature follows the film's own measured series (rescaled to run from 0 at the film's lowest to 1 at its highest), through the same hemodynamic response, so 2 seconds at a value of 1 gives the same response as one trial.</p>
     <p><b>What it can and cannot show.</b> The layout of these maps follows well-known findings, but it is a cartoon: we built it in, so finding it here is not evidence for it. Real maps are noisier, vary from person to person, and are rarely this tidy.</p>
     <p>Surface: FreeSurfer fsaverage5. Regions: Destrieux atlas (Destrieux et al., 2010). Both are modified (converted and rescaled) and used under the <a href="FreeSurfer-license.txt">FreeSurfer license</a>. Rendering: three.js. Code: MIT license, <a href="https://github.com/jhutchin/brainfeatures">source on GitHub</a>.</p>
   </footer>
@@ -302,6 +321,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="brain.js"></script>
 <script src="sim.js"></script>
+<script src="data/film-design.js"></script>
 <script>
 "use strict";
 const S = window.BrainSim;
@@ -392,7 +412,7 @@ const regionName = (code) => REGION[code] || code.replace(/^G_and_S_/, "").repla
 // ------------------------------------------------------------ state
 
 const state = {
-  nTrials: 80, noise: 0.5, corr: 0, seed: 1,
+  stimulus: "trials", nTrials: 80, noise: 0.5, corr: 0, seed: 1,
   included: S.FEATURES.filter((f) => !f.always).map((f) => f.id),
   map: "brightness", mode: "t", thr: 3.1,
   view: "left-medial", surface: "infl", vertex: null, step: 0,
@@ -401,6 +421,7 @@ const state = {
 const brain = S.loadBrain(window.BRAIN_DATA);
 const truth = S.trueMaps(brain);
 let design = null, Y = null, fit = null;
+const FILM = window.FILM_DESIGN || null;
 
 // ------------------------------------------------------------ three.js scene
 
@@ -681,12 +702,26 @@ function resimulate() {
   $("busy").hidden = false;
   clearTimeout(simTimer);
   simTimer = setTimeout(() => {
-    design = S.makeDesign({ nTrials: state.nTrials, corrFaceSpeech: state.corr, seed: state.seed });
+    design = state.stimulus === "film" && FILM
+      ? S.makeFilmDesign(FILM, { seed: state.seed })
+      : S.makeDesign({ nTrials: state.nTrials, corrFaceSpeech: state.corr, seed: state.seed });
     Y = S.simulate(brain, truth, design, { noise: state.noise, seed: state.seed });
-    $("corr-hint").textContent = `In this run, faces and speech correlate at r = ${fmt(design.rFaceSpeech, 2)}.`;
+    if (design.film) showPairs();
+    else $("corr-hint").textContent = `In this run, faces and speech correlate at r = ${fmt(design.rFaceSpeech, 2)}.`;
+    renderSteps();
     refit();
     $("busy").hidden = true;
   }, 30);
+}
+
+// the film's strongest feature pairs, as the model sees them
+const PAIRS = [["faces", "speech"], ["speech", "social"], ["brightness", "faces"], ["brightness", "valence"], ["loudness", "faces"]];
+function showPairs() {
+  $("pairs").innerHTML = PAIRS.map(([a, b]) => {
+    const r = S.corr(design.cols[a], design.cols[b]);
+    return `<div class="pair"><span>${S.FEATURE[a].name} &amp; ${S.FEATURE[b].name}</span><output>${r >= 0 ? "+" : "−"}${fmt(Math.abs(r), 2)}</output>` +
+      `<span class="pt"><i style="width:${Math.round(100 * Math.abs(r))}%"></i></span></div>`;
+  }).join("");
 }
 
 function refit() {
@@ -803,19 +838,34 @@ function drawSeries(v) {
   line(data, { stroke: cssColor("--ink-3"), "stroke-width": 1.2, "stroke-linejoin": "round" });
   line(fitted, { stroke: cssColor("--accent"), "stroke-width": 2, "stroke-linejoin": "round" });
 
+  const f = S.FEATURE[state.map];
+  const ink = cssColor("--ink");
+  const tickY = H - bottom + 2;
+  if (design.film) {
+    // the film's own value of the mapped feature under each scan (before the HRF)
+    const vals = design.values[state.map];
+    const n = vals.length, sdt = n > 1 ? design.dur / n : design.dur;
+    const w = Math.max(1, x(1) - x(0));
+    for (let t = 0; t < T; t++) {
+      const ft = t * TR - design.lead;
+      if (ft < 0 || ft >= design.dur) continue;
+      const val = vals[Math.min(n - 1, Math.floor(ft / sdt))];
+      el("rect", { x: x(t) - w / 2, y: tickY, width: w + 0.5, height: 8, fill: ink, opacity: (0.06 + 0.94 * val).toFixed(2) }, svg);
+    }
+    $("tick-key").innerHTML = `<i style="width:10px;height:8px;background:var(--ink)"></i>The film, darker = more ${f.name.toLowerCase()}`;
+    $("ts-sub").textContent = `${T} scans, one every ${TR} s, while the film plays. Model fit includes every feature in the model plus drift.`;
+  } else {
   // trial ticks, darker = more of the mapped feature
   const vals = design.values[state.map];
   let vmin = Infinity, vmax = -Infinity;
   for (const val of vals) { vmin = Math.min(vmin, val); vmax = Math.max(vmax, val); }
-  const ink = cssColor("--ink");
-  const tickY = H - bottom + 2;
   for (let i = 0; i < design.nTrials; i++) {
     const f = vmax > vmin ? (vals[i] - vmin) / (vmax - vmin) : 1;
     el("rect", { x: x(design.onsets[i] / TR), y: tickY, width: Math.max(1.5, x(design.dur / TR) - x(0)), height: 8, fill: ink, opacity: (0.12 + 0.88 * f).toFixed(2) }, svg);
   }
-  const f = S.FEATURE[state.map];
   $("tick-key").innerHTML = `<i style="width:10px;height:8px;background:var(--ink)"></i>Trials, darker = more ${f.name.toLowerCase()}`;
   $("ts-sub").textContent = `${T} scans, one every ${TR} s. Model fit includes every feature in the model plus drift.`;
+  }
 
   const cross = el("line", { y1: top, y2: H - bottom, stroke: cssColor("--ink-2"), "stroke-width": 1, visibility: "hidden" }, svg);
   const hit = el("rect", { x: left, y: top, width: W - left - right, height: H - top - bottom, fill: "transparent" }, svg);
@@ -882,15 +932,34 @@ const STEPS = [
       "Drag <b>Trials</b> to 160, or lower the noise. Abstract features usually need more data than sensory ones. Module 2 follows this from sensory to abstract.",
     ],
   },
+  {
+    title: "A real film: faces and speech",
+    film: true,
+    set: { stimulus: "film", map: "faces", view: "left-lateral", included: S.FEATURES.filter((f) => !f.always && f.id !== "speech" && f.id !== "social").map((f) => f.id), vertex: ["speech", "L"] },
+    text: [
+      "The trials are gone. The stimulus is now one real film, and each feature rises and falls with the film's own measured values. In this film, faces and speech go together at r = {RFS}: people talk when they are on screen.",
+      "The model leaves out <b>Speech</b> and <b>Social interaction</b>. Faces again seem to drive the speech region, though more weakly than with the slider at 80%. Switch to <b>True effect</b>, then tick <b>Speech</b> and watch the false patch go.",
+    ],
+  },
+  {
+    title: "Two names for one thing",
+    film: true,
+    set: { stimulus: "film", map: "speech", view: "left-lateral", vertex: ["speech", "L"] },
+    text: [
+      "Every feature is in the model now, and speech fades in its own region. The film's <b>Social interaction</b> is measured as the number of voices talking, from the same who-speaks-when analysis as <b>Speech</b>. So the two rise and fall together (r = {RSS}). The model cannot tell which one the region follows, so both estimates get wide error bars. Click the region and look below the brain.",
+      "Untick <b>Social interaction</b>: speech comes back. Then tick it and untick <b>Speech</b> instead: now social interaction takes over speech's map. Real stimuli are full of features like these, and choosing which to put in the model is part of the analysis.",
+    ],
+  },
 ];
 
 function applyStep(i) {
   state.step = i;
   const s = STEPS[i].set;
-  const defaults = { nTrials: 80, noise: 0.5, corr: 0, thr: 3.1, included: S.FEATURES.filter((f) => !f.always).map((f) => f.id) };
+  const defaults = { stimulus: "trials", nTrials: 80, noise: 0.5, corr: 0, thr: 3.1, included: S.FEATURES.filter((f) => !f.always).map((f) => f.id) };
   const next = { ...defaults, ...s };
-  const needSim = next.nTrials !== state.nTrials || next.noise !== state.noise || next.corr !== state.corr;
-  Object.assign(state, { nTrials: next.nTrials, noise: next.noise, corr: next.corr, thr: next.thr, included: next.included.slice(), map: s.map, mode: "t" });
+  if (next.stimulus === "film" && !FILM) next.stimulus = "trials";
+  const needSim = next.stimulus !== state.stimulus || next.nTrials !== state.nTrials || next.noise !== state.noise || next.corr !== state.corr;
+  Object.assign(state, { stimulus: next.stimulus, nTrials: next.nTrials, noise: next.noise, corr: next.corr, thr: next.thr, included: next.included.slice(), map: s.map, mode: "t" });
   if (s.vertex) state.vertex = peakVertex(s.vertex[0], s.vertex[1]);
   syncControls();
   renderSteps();
@@ -902,6 +971,7 @@ function renderSteps() {
   const box = $("steps");
   box.innerHTML = "";
   STEPS.forEach((s, i) => {
+    if (s.film && !FILM) return;
     const b = document.createElement("button");
     b.type = "button"; b.className = "step";
     b.setAttribute("aria-current", String(i === state.step));
@@ -910,12 +980,19 @@ function renderSteps() {
     box.appendChild(b);
   });
   const nCortex = brain.cortex.reduce((a, b) => a + b, 0).toLocaleString();
-  $("step-text").innerHTML = STEPS[state.step].text.map((p) => `<p>${p.replace("{N}", nCortex)}</p>`).join("");
+  const r = (a, b) => (design && design.film ? fmt(S.corr(design.cols[a], design.cols[b]), 2) : "…");
+  $("step-text").innerHTML = STEPS[state.step].text.map((p) => `<p>${p.replace("{N}", nCortex).replace("{RFS}", r("faces", "speech")).replace("{RSS}", r("speech", "social"))}</p>`).join("");
 }
 
 // ------------------------------------------------------------ controls
 
 function syncControls() {
+  const film = state.stimulus === "film";
+  $("stim-trials").setAttribute("aria-pressed", String(!film));
+  $("stim-film").setAttribute("aria-pressed", String(film));
+  $("filminfo").hidden = !film;
+  $("ctl-trials").hidden = film;
+  $("ctl-corr").hidden = film;
   $("trials").value = state.nTrials; $("trials-out").textContent = state.nTrials;
   $("noise").value = state.noise; $("noise-out").textContent = fmt(state.noise, 2);
   $("corr").value = state.corr; $("corr-out").textContent = Math.round(state.corr * 100) + "%";
@@ -970,6 +1047,10 @@ function syncControls() {
   slider("thr", "thr", (x) => fmt(x), () => {});
 
   $("reseed").addEventListener("click", () => { state.seed += 1; resimulate(); });
+  const setStim = (v) => { if (state.stimulus === v) return; state.stimulus = v; syncControls(); resimulate(); };
+  $("stim-trials").addEventListener("click", () => setStim("trials"));
+  $("stim-film").addEventListener("click", () => setStim("film"));
+  if (!FILM) { $("stim-film").disabled = true; $("stim-film").title = "The film's feature data did not load"; }
   $("mode-t").addEventListener("click", () => { state.mode = "t"; syncControls(); recolor(); });
   $("mode-truth").addEventListener("click", () => { state.mode = "truth"; syncControls(); recolor(); });
   $("surf-infl").addEventListener("click", () => setSurface("infl"));

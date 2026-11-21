@@ -339,6 +339,105 @@
     };
   }
 
+  // Naturalistic run: one viewing of a real film, with each feature's value
+  // taken moment by moment from the film's measured series (filmData = the
+  // build's FILM_DESIGN). Collinearity now comes from the film, not a slider.
+  //   - each series is rescaled to 0-1 over the film (a count of faces becomes
+  //     presence), so "per unit" means "from the film's lowest to its highest";
+  //   - features are parametric modulators: value minus the film's mean;
+  //   - the hemodynamic system is the trial design's: 2 s at value 1 gives
+  //     one trial's response, and a value held longer keeps building (linear);
+  //   - "random" is a made-up value per 2 s, the null feature as before.
+  function makeFilmDesign(filmData, { seed = 1, TR = 2, lead = 8, tail = 16 } = {}) {
+    const rand = rng(seed * 7919 + 29);
+    const dur = filmData.duration;
+    const total = lead + dur + tail;
+    const T = Math.ceil(total / TR);
+    const dt = 0.1;
+    const nHi = Math.ceil(total / dt);
+
+    // The trial design's linear system, sampled finely: scaled so that a 2 s
+    // stretch at value 1 peaks at 1, exactly the response to one 2 s trial.
+    const h = boxResponse(dt, dt);
+    const box = Math.round(2 / dt);
+    let peak = 0;
+    for (let i = 0; i < h.length + box; i++) {
+      let s = 0;
+      for (let j = 0; j < box; j++) if (i - j >= 0 && i - j < h.length) s += h[i - j];
+      peak = Math.max(peak, s);
+    }
+    for (let i = 0; i < h.length; i++) h[i] /= peak;
+
+    const conv = (hi) => {
+      const y = new Float64Array(nHi);
+      for (let i = 0; i < nHi; i++) {
+        const x = hi[i];
+        if (!x) continue;
+        for (let j = 0; j < h.length && i + j < nHi; j++) y[i + j] += x * h[j];
+      }
+      const col = new Float64Array(T);
+      for (let s = 0; s < T; s++) col[s] = y[Math.min(nHi - 1, Math.round((s * TR) / dt))];
+      return col;
+    };
+    const filmTime = (i) => i * dt - lead;          // film time of hi-res sample i
+
+    const values = {}, cols = {};
+    for (const f of FEATURES) {
+      const hi = new Float64Array(nHi);
+      if (f.id === "on") {
+        for (let i = 0; i < nHi; i++) { const ft = filmTime(i); if (ft >= 0 && ft < dur) hi[i] = 1; }
+        values.on = new Float64Array([1]);
+      } else {
+        let raw, t0 = 0, sdt = 2;
+        if (f.id === "random") {
+          raw = Float64Array.from({ length: Math.ceil(dur / 2) }, () => rand());
+        } else {
+          const src = filmData.features[f.id];
+          if (!src) throw new Error(`film design has no series for ${f.id}`);
+          raw = Float64Array.from(src.v, (x) => (src.binary ? (x > 0 ? 1 : 0) : x));
+          t0 = src.t0; sdt = src.dt;
+        }
+        let lo = Infinity, top = -Infinity;
+        for (const x of raw) { if (x < lo) lo = x; if (x > top) top = x; }
+        const scaled = Float64Array.from(raw, (x) => (top > lo ? (x - lo) / (top - lo) : 0));
+        values[f.id] = scaled;
+        // hold each sample over its own bin, centred on t0 + k * sdt
+        const at = new Float64Array(nHi), has = new Uint8Array(nHi);
+        for (let i = 0; i < nHi; i++) {
+          const ft = filmTime(i);
+          if (ft < 0 || ft >= dur) continue;
+          const k = Math.min(scaled.length - 1, Math.max(0, Math.round((ft - t0) / sdt)));
+          at[i] = scaled[k]; has[i] = 1;
+        }
+        let m = 0, n = 0;
+        for (let i = 0; i < nHi; i++) if (has[i]) { m += at[i]; n++; }
+        m /= n;
+        for (let i = 0; i < nHi; i++) if (has[i]) hi[i] = at[i] - m;
+      }
+      cols[f.id] = conv(hi);
+    }
+
+    const F = filmData.features;
+    return {
+      film: true, TR, T, dur, lead, nTrials: 0, onsets: new Float64Array(0), values, cols,
+      rFaceSpeech: corr(cols.faces, cols.speech),
+      rFaceSpeechRaw: corr(Float64Array.from(F.faces.v, (x) => (x > 0 ? 1 : 0)), nearest(F.speech, F.faces)),
+    };
+  }
+
+  // src's values at ref's sample times (nearest sample; grids can be offset)
+  function nearest(src, ref) {
+    return Float64Array.from(ref.v, (_, k) => {
+      const t = ref.t0 + k * ref.dt;
+      return src.v[Math.min(src.v.length - 1, Math.max(0, Math.round((t - src.t0) / src.dt)))];
+    });
+  }
+
+  // correlation matrix of a design's feature columns (after the HRF)
+  function designCorr(design, ids) {
+    return ids.map((a) => ids.map((b) => corr(design.cols[a], design.cols[b])));
+  }
+
   // ---------------------------------------------------------------- simulate
 
   // Y is vertex-major: Y[v * T + t], in % signal change around baseline.
@@ -504,5 +603,5 @@
     return y * Math.exp(-x * x);
   }
 
-  return { FEATURES, FEATURE, loadBrain, trueMaps, makeDesign, simulate, fitGLM, corr, twoTailP };
+  return { FEATURES, FEATURE, loadBrain, trueMaps, makeDesign, makeFilmDesign, designCorr, simulate, fitGLM, corr, twoTailP };
 });

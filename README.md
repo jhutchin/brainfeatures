@@ -2,7 +2,7 @@
 
 A teaching sandbox for functional neuroanatomy. The brain data are simulated: each stimulus feature drives planted patches of cortex, a random event-related experiment is run, and an ordinary GLM analyses it. Learners can always compare what the analysis recovers with what generated it.
 
-Module 1 (mapping a variable) is built. Planned next:
+Module 1 (mapping a variable) is built, with two stimuli: random clips with a faces–speech slider, and one viewing of a real film (*Tears of Steel*) whose measured features drive the simulation. Planned next:
 - Module 2: from sensory to abstract features.
 - Module 3: RSA of regions against embedding spaces.
 
@@ -19,6 +19,8 @@ Module 1 (mapping a variable) is built. Planned next:
 | `build/build_page1.py` | Builds page 1's release assets from the extracted features: pictures at viz2psy's canonical size, the thumbnail atlas, the sound clips and the payload |
 | `build/assets.tsv` | Page 1's pictures, clips and payload, and the film (web copy) and page 2's feature payload: not in git, attached to the `media-v1` release, fetched and checksummed by `build/fetch_assets.py` |
 | `tests/check_credits.py` | Checks that every model whose output pages 1 and 2 show has a credit row, that every picture carries its credit and licence, that no egemaps output ships, and that page 1 ships no raw embeddings |
+| `build/film_design.py` | Writes page 3's film design (`data/film-design.js`): the film's series for the eight simulated features, copied from page 2's payload at build time |
+| `tests/test_film.js` | Checks page 3's film mode on the real film: planted maps return, the null stays near nominal, faces take speech's credit when speech is left out, and speech and voices talking trade off |
 | `tests/test_sim.js` | Checks that the GLM recovers each planted map, that the null feature's false-positive rate stays near nominal, and that leaving speech out of the model lets faces take its credit |
 
 ## Run
@@ -28,6 +30,8 @@ uv run --no-project --with nilearn python build/build_brain.py   # regenerate we
 node tests/test_sim.js
 python3 build/make_site.py _site                                  # static site; serve _site/ to view locally
 python3 build/fetch_assets.py _site                               # add the media and payloads (from the releases)
+python3 build/film_design.py _site                                # page 3's film design, from page 2's payload
+node tests/test_film.js _site
 python3 tests/check_credits.py _site
 ```
 

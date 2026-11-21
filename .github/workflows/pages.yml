@@ -28,6 +28,10 @@ jobs:
         run: python3 build/make_site.py _site
       - name: Fetch film and feature data (release assets, checksummed)
         run: python3 build/fetch_assets.py _site
+      - name: Page 3 film design (from page 2's payload)
+        run: python3 build/film_design.py _site
+      - name: Film-mode tests
+        run: node tests/test_film.js _site
       - name: Credits check
         run: python3 tests/check_credits.py _site
       - uses: actions/upload-pages-artifact@v3
