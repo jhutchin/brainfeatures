@@ -115,6 +115,24 @@
   /* player */
   .player { padding: 0; overflow: hidden; }
   .player video { display: block; width: 100%; aspect-ratio: 960 / 400; background: #000; }
+  .vidbox { position: relative; aspect-ratio: 960 / 400; background: #000; }
+  /* scrolled away while in use: the film follows as a small player, bottom left over the
+     side column, so the lanes, the comparison and its map stay readable beside it */
+  .vidbox.float video {
+    position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 16px; z-index: 20;
+    width: min(360px, 46vw); border-radius: 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  }
+  .vidbox .dock {
+    position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); z-index: 21;
+    bottom: calc(16px + min(360px, 46vw) * 400 / 960 + 6px);
+    font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink-2); cursor: pointer;
+  }
+  .vidbox .dock:hover { border-color: var(--accent); }
+  .pairlist { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 4px; }
+  .pairbtn { width: 100%; display: flex; justify-content: space-between; gap: 8px; text-align: left; font-size: 0.86rem;
+    border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+  .pairbtn:hover { border-color: var(--accent); }
   .moment { padding: 10px 14px 12px; display: grid; gap: 6px; border-top: 1px solid var(--line); }
   .moment .row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; font-size: 0.92rem; }
   .moment .k { color: var(--ink-3); font-size: 0.8rem; padding-top: 2px; }
@@ -218,7 +236,10 @@
 
     <div class="main">
       <section class="panel player" id="p-player" aria-label="The film">
-        <video id="film" controls playsinline preload="metadata" src="media/tears-of-steel-960.mp4"></video>
+        <div class="vidbox" id="vidbox">
+          <video id="film" controls playsinline preload="metadata" src="media/tears-of-steel-960.mp4"></video>
+          <button type="button" class="dock" id="dock" hidden aria-label="Put the film back in its place">Back to its place ×</button>
+        </div>
         <div class="moment" id="moment">
           <div class="row"><div class="k">Time</div><div class="v clock" id="m-time">0:00.0</div></div>
           <div class="row"><div class="k">Caption model</div><div class="v" id="m-cap">–</div></div>
@@ -277,6 +298,7 @@
 
 <div class="tip" id="tip" hidden></div>
 
+<script src="gloss.js"></script>
 <script src="data/tears-of-steel.js"></script>
 <script>
 "use strict";
@@ -841,6 +863,22 @@ function rFor(a, b) {
 }
 const sgn = (r) => Number.isFinite(r) ? `${r >= 0 ? "+" : "−"}${Math.abs(r).toFixed(2)}` : "–";
 
+// the strongest-correlated pairs among the curated lanes (computed once, from the film's own series)
+let PAIRS_CACHE = null;
+function topPairs(k) {
+  if (!PAIRS_CACHE) {
+    const lanes = state.lanes.filter((L) => CURATED.some((c) => c.f === L.f || c.alt === L.f));
+    const grids = lanes.map((L) => sampleGrid(L.s));
+    PAIRS_CACHE = [];
+    for (let i = 0; i < lanes.length; i++) for (let j = i + 1; j < lanes.length; j++) {
+      const r = corr(grids[i], grids[j]).r;
+      if (Number.isFinite(r)) PAIRS_CACHE.push({ a: lanes[i], b: lanes[j], r });
+    }
+    PAIRS_CACHE.sort((x, y) => Math.abs(y.r) - Math.abs(x.r));
+  }
+  return PAIRS_CACHE.slice(0, k);
+}
+
 const STEPS = [
   {
     t: "A feature is a number for every moment",
@@ -859,20 +897,24 @@ const STEPS = [
   {
     t: "Some features need a trained model",
     go() { setWin("all"); },
-    html: () => `<p><b>Faces</b>, the <b>scene model</b>'s guess and the <b>caption</b> under the film come from neural networks trained on millions of labelled examples. They are often right, and sometimes confidently wrong.</p><p>Watch a minute and compare the caption and scene with what you see. A wrong feature still gets used in an analysis, so its errors become the analysis's errors.</p>`,
+    html: () => `<p><b>Faces</b>, the <b>scene model</b>'s guess and the <b>caption</b> under the film come from <button type="button" class="term" data-term="model">neural networks</button> trained on millions of labelled examples. They are often right, and sometimes confidently wrong.</p><p>Watch a minute and compare the caption and scene with what you see. A wrong feature still gets used in an analysis, so its errors become the analysis's errors.</p>`,
   },
   {
     t: "Features travel together",
     go() { setWin("all"); setCompare("faces_count", "conversation_speech_fraction"); },
     html: () => {
       const r = rFor("faces_count", "conversation_speech_fraction");
-      return `<p>In films, things happen together. When someone speaks, the camera usually shows a face. In this film, <b>Faces</b> and <b>Speech</b> correlate at <b>r = ${sgn(r)}</b> (the panel below).</p><p>That matters for brain mapping. If a model includes faces but leaves out speech, any brain response to speech can be credited to faces. Page 3 lets you try this: <a href="index.html">open Synthetic Cortex</a>, set <i>Faces come with speech</i> near ${Number.isFinite(r) ? Math.abs(r).toFixed(2) : "this value"}, and untick Speech in the model.</p>`;
+      const pairs = topPairs(4).map((q) => `<li><button type="button" class="pairbtn" data-pa="${q.a.f}" data-pb="${q.b.f}"><span>${q.a.name} &amp; ${q.b.name}</span><span class="mono">r = ${sgn(q.r)}</span></button></li>`).join("");
+      return `<p>In films, things happen together. When someone speaks, the camera usually shows a face. In this film, <b>Faces</b> and <b>Speech</b> have a <button type="button" class="term" data-term="correlation">correlation</button> of <b>r = ${sgn(r)}</b> (the panel below).</p>` +
+        `<p>The most strongly related pairs among this page's lanes. Click one to see it in the panel.</p><ul class="pairlist">${pairs}</ul>` +
+        `<p><b>What it says about the features.</b> Pairs go together for different reasons. Some happen together in the world, like faces and speech. Some are two measures of one thing: <b>Speech</b> and <b>Voices talking</b> both come from the same who-speaks-when analysis. Either way, the features are not independent, and a feature's lane alone does not show what comes with it.</p>` +
+        `<p><b>What it means for the brain.</b> If a brain region follows one feature of a pair, its signal also rises and falls with the other. So a speech region can look like a face region: speech is a <button type="button" class="term" data-term="confound">confound</button>. An analysis can tell them apart only if it includes both features, or if the stimuli pull them apart. Page 3, <a href="index.html">Synthetic Cortex</a>, shows this on a simulated brain, and its step 6 runs it on this very film.</p>`;
     },
   },
   {
     t: "Hundreds of features at once",
     go() { setProj("visual"); $("p-cmp").scrollIntoView({ block: "nearest", behavior: "smooth" }); },
-    html: () => `<p>Some models describe a moment with hundreds of numbers, an <b>embedding</b>. No single number means much, but moments that look alike get similar embeddings.</p><p>The map beside the comparison squeezes those numbers onto two dimensions. Play the film and watch the ring: it rests within a shot and leaps at a cut. Switch to <b>Sound</b> or <b>Words</b> to see the same film through another model.</p>`,
+    html: () => `<p>Some models describe a moment with hundreds of numbers, an <button type="button" class="term" data-term="embedding"><b>embedding</b></button>. No single number means much, but moments that look alike get similar embeddings. Page 1, step 5, builds up to this with pictures.</p><p>The <button type="button" class="term" data-term="mds">map</button> beside the comparison squeezes those numbers onto two dimensions. Play the film and watch the ring: it rests within a shot and leaps at a cut. Switch to <b>Sound</b> or <b>Words</b> to see the same film through another model.</p>`,
   },
   {
     t: "Explore",
@@ -921,6 +963,12 @@ function boot() {
   $("win-all").onclick = () => setWin("all");
   $("win-60").onclick = () => setWin("60");
   $("cmp-a").onchange = compare; $("cmp-b").onchange = compare;
+  $("step-text").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pa]");
+    if (!b) return;
+    setCompare(b.dataset.pa, b.dataset.pb);
+    $("p-cmp").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
   document.querySelectorAll("[data-proj]").forEach((b) => b.onclick = () => setProj(b.dataset.proj));
   let qTimer = null;
   $("q").addEventListener("input", (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => searchFeatures(e.target.value), 120); });
@@ -941,6 +989,29 @@ function boot() {
   new MutationObserver(() => tick(true)).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   video.addEventListener("loadedmetadata", () => { if (pendingSeek !== null) { try { video.currentTime = pendingSeek; } catch (_) {} } });
   requestAnimationFrame(loop);
+  floatingPlayer();
+}
+
+// The film follows the reader as a small player once it is in use (playing, or paused
+// partway) and its place has scrolled out of view. "Back to its place" docks it until
+// its place is seen again.
+function floatingPlayer() {
+  const box = $("vidbox"), dock = $("dock");
+  let away = false, dismissed = false;
+  const inUse = () => !video.paused || video.currentTime > 0;
+  const update = () => {
+    const on = away && inUse() && !dismissed && !document.fullscreenElement;
+    box.classList.toggle("float", on);
+    dock.hidden = !on;
+  };
+  new IntersectionObserver(([e]) => {
+    away = e.intersectionRatio < 0.35;
+    if (!away) dismissed = false;
+    update();
+  }, { threshold: [0, 0.35, 1] }).observe(box);
+  video.addEventListener("play", update);
+  video.addEventListener("pause", update);
+  dock.addEventListener("click", () => { dismissed = true; update(); });
 }
 boot();
 </script>

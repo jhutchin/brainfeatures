@@ -34,7 +34,7 @@ def main(out_dir):
     out.mkdir(parents=True, exist_ok=True)
     for name in PAGES:
         (out / name).write_text(wrap((ROOT / "web" / name).read_text()))
-    for name in ("brain.js", "sim.js", "hand.js"):
+    for name in ("brain.js", "sim.js", "hand.js", "gloss.js"):
         shutil.copy2(ROOT / "web" / name, out / name)
     shutil.copy2(ROOT / "licenses" / "FreeSurfer.txt", out / "FreeSurfer-license.txt")
     (out / ".nojekyll").write_text("")

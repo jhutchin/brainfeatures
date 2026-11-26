@@ -98,6 +98,16 @@
   .step[aria-current="true"] .n { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .step .t { font-weight: 600; font-size: 0.95rem; }
   .step-text { margin: 10px 2px 2px; color: var(--ink-2); font-size: 0.93rem; }
+  #p-try.primary { border: 2px solid var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  #p-try.primary h2 { color: var(--accent); font-size: 0.86rem; }
+  #p-try .intro { margin: -4px 0 10px; font-size: 0.84rem; color: var(--ink-2); }
+  .cue-key { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; padding: 0 3px; margin-right: 3px; }
+  .stepnav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+  .stepnav .next { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+  .stepnav .btn:disabled { opacity: 0.45; cursor: default; }
+  /* controls the current step uses */
+  .cue { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; animation: cue 1.6s ease-out 1; }
+  @keyframes cue { 0% { box-shadow: 0 0 0 0 var(--accent); } 100% { box-shadow: 0 0 0 10px transparent; } }
   .step-text p { margin: 0 0 8px; }
   .step-text p:last-child { margin: 0; }
 
@@ -155,6 +165,21 @@
   .readout { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 0.92rem; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 18px; }
   .readout b { color: var(--ink); font-weight: 600; }
 
+  /* pinned snapshot beside the live brain */
+  .duo.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; align-items: start; }
+  .duo.on .pane + .pane { border-left: 1px solid var(--line); }
+  .pane { position: relative; min-width: 0; margin: 0; }
+  .pane-tag { position: absolute; z-index: 2; top: 8px; right: 10px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 600; padding: 2px 8px; border-radius: 4px; background: var(--accent-soft); color: var(--ink); }
+  .pane-tag.pin { background: var(--warn-bg); color: var(--warn-ink); }
+  .pin-img { aspect-ratio: 16 / 10; background: var(--panel); }
+  .pin-img img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .pinned figcaption { padding: 6px 12px 10px; font-size: 0.82rem; color: var(--ink-2); display: grid; gap: 6px; }
+  .pin-diff ul { margin: 2px 0 0; padding-left: 18px; }
+  .pin-diff .same { color: var(--ink-3); }
+  .pin-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pin-dots { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); }
+  .pin-dots svg { width: 100%; height: auto; }
   /* probe */
   .probe-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
   .probe-head h3 { font-size: 1.05rem; }
@@ -183,6 +208,9 @@
     #p-try { order: 1; } #p-stage { order: 2; } #p-probe { order: 3; } #p-exp { order: 4; } #p-model { order: 5; }
     .probe-grid { grid-template-columns: minmax(0, 1fr); }
     .brain-wrap { aspect-ratio: 4 / 3; }
+    .pin-img { aspect-ratio: 4 / 3; }
+    .duo.on { grid-template-columns: minmax(0, 1fr); }
+    .duo.on .pane + .pane { border-left: 0; border-top: 1px solid var(--line); }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -193,7 +221,7 @@
       <h1>Synthetic Cortex</h1>
       <span class="sim-badge">Simulated data</span>
     </div>
-    <p class="lede">Every response on this page comes from a brain we made up. We decided where each feature of a stimulus drives activity, then ran a fake fMRI experiment and analysed it the way a real study would. Because we know the answer, you can check whether the analysis finds it.</p>
+    <p class="lede">Every response on this page comes from a brain we made up. We decided where each feature of a stimulus drives activity, then ran a fake fMRI experiment and analysed it the way a real study would, with a <button type="button" class="term" data-term="glm">general linear model</button>. Because we know the answer, you can check whether the analysis finds it.</p>
     <nav class="series" aria-label="Pages in this series">
       <a href="features.html">1 · What a feature is</a>
       <a href="film.html">2 · Features over time</a>
@@ -210,46 +238,54 @@
 
   <div class="bench">
     <div class="side">
-      <section class="panel" id="p-try" aria-labelledby="h-try">
-        <h2 id="h-try">Try this</h2>
+      <section class="panel primary" id="p-try" aria-labelledby="h-try">
+        <h2 id="h-try">Start here · Try this</h2>
+        <p class="intro">Short steps that build on each other. Each one sets up the page and says what to try, and the controls it uses <span class="cue-key">light up</span>. Explore freely, and come back to any step.</p>
         <div class="steps" id="steps"></div>
-        <div class="step-text" id="step-text"></div>
+        <div class="step-text" id="step-text" aria-live="polite"></div>
+        <div class="stepnav">
+          <button type="button" class="btn" id="step-prev">← Back</button>
+          <span class="hint" id="step-of"></span>
+          <button type="button" class="btn next" id="step-next">Next step →</button>
+        </div>
       </section>
 
       <section class="panel" id="p-exp" aria-labelledby="h-exp">
         <h2 id="h-exp">The experiment</h2>
-        <div class="seg full" role="group" aria-label="Stimulus">
+        <div class="seg full" role="group" aria-label="Stimulus" id="stim-seg">
           <button type="button" id="stim-trials" aria-pressed="true">Random clips</button>
           <button type="button" id="stim-film" aria-pressed="false">A real film</button>
         </div>
         <div class="filminfo" id="filminfo" hidden>
           <p>One viewing of <i>Tears of Steel</i> (12 min). Every feature's value comes from the film itself, moment by moment: the same numbers as on <a href="film.html" style="color:var(--accent)">page 2</a>. Nobody chose how they correlate.</p>
           <div class="pairs" id="pairs"></div>
-          <p class="hint">Correlations of the model's columns, after the slow hemodynamic response. Faces = a face on screen; Social interaction = voices talking (from who speaks when).</p>
+          <p class="hint">Correlations of the model's columns, after the slow <button type="button" class="term" data-term="hrf">hemodynamic response</button>. Faces = a face on screen; Social interaction = voices talking (from who speaks when). The film fixes the timing and how features go together, so the trials and faces-with-speech sliders are hidden; noise still applies.</p>
         </div>
         <div class="ctl" id="ctl-trials">
           <label for="trials">Trials <output id="trials-out" class="mono"></output></label>
           <input id="trials" type="range" min="30" max="160" step="10" value="80">
-          <span class="hint">2-second clips, 2–6 s apart, one run.</span>
+          <span class="hint">How many 2-second clips the simulated viewer watches (2–6 s apart, one run). More trials give the analysis more data for every feature. The true effects stay the same, but the estimates get more certain, so t values grow.</span>
         </div>
-        <div class="ctl">
+        <div class="ctl" id="ctl-noise">
           <label for="noise">Noise <output id="noise-out" class="mono"></output></label>
           <input id="noise" type="range" min="0.25" max="2" step="0.05" value="0.5">
-          <span class="hint">Standard deviation of the noise, in % signal change.</span>
+          <span class="hint">Random wobble added to every point's signal, unrelated to the stimulus (its standard deviation, in <button type="button" class="term" data-term="psc">% signal change</button>). More noise buries the same true effects: doubling it roughly halves every t value.</span>
         </div>
         <div class="ctl" id="ctl-corr">
           <label for="corr">Faces come with speech <output id="corr-out" class="mono"></output></label>
           <input id="corr" type="range" min="0" max="0.9" step="0.05" value="0">
+          <span class="hint">The chance that a clip's speech simply copies its faces: a face means someone talks, no face means silence. At 0 % the two are independent; at 80 % they mostly come together. This changes the clips, not the brain: what each region truly responds to stays the same.</span>
           <span class="hint" id="corr-hint">In this run, faces and speech correlate at r = 0.00.</span>
         </div>
         <div class="ctl">
           <button class="btn" id="reseed" type="button">Run a new random experiment</button>
+          <span class="hint">Same settings, new random clips and new noise. Shows how much a result changes from one run to the next.</span>
         </div>
       </section>
 
       <section class="panel" id="p-model" aria-labelledby="h-model">
         <h2 id="h-model">The model</h2>
-        <p class="hint" style="margin:0 0 8px">Features the analysis knows about. A feature left out cannot be estimated, and its effect may be credited to another feature.</p>
+        <p class="hint" style="margin:0 0 8px">Features the analysis knows about. A feature left out cannot be estimated, and its effect may be credited to another feature (an <button type="button" class="term" data-term="omitted">omitted variable</button>).</p>
         <div class="checks" id="model-checks"></div>
       </section>
     </div>
@@ -260,7 +296,7 @@
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <label for="map-feature" id="h-map" style="font-weight:600;font-size:0.92rem">Map</label>
             <select id="map-feature" style="width:auto"></select>
-            <div class="seg" role="group" aria-label="What the map shows">
+            <div class="seg" role="group" aria-label="What the map shows" id="mode-seg">
               <button type="button" id="mode-t" aria-pressed="true">Estimated (t)</button>
               <button type="button" id="mode-truth" aria-pressed="false">True effect</button>
             </div>
@@ -272,18 +308,37 @@
         </div>
         <div class="viewbar" style="padding-top:8px;padding-bottom:8px">
           <div class="views" id="views" role="group" aria-label="View"></div>
-          <div class="ctl" style="margin:0;min-width:200px;flex:1;max-width:320px">
+          <div class="ctl" id="ctl-thr" style="margin:0;min-width:200px;flex:1;max-width:320px">
             <label for="thr" style="font-size:0.84rem">Threshold |t| &gt; <output id="thr-out" class="mono"></output></label>
             <input id="thr" type="range" min="1.5" max="8" step="0.1" value="3.1">
+            <span class="hint">Only points beyond the <button type="button" class="term" data-term="threshold">threshold</button> are coloured. It changes what is shown, not the data.</span>
           </div>
         </div>
-        <div class="brain-wrap" id="brain-wrap">
-          <canvas id="brain" aria-label="Brain surface. Drag to rotate, click a spot to inspect it."></canvas>
-          <div class="busy" id="busy" hidden>Simulating…</div>
-          <div class="notice" id="notice" hidden></div>
+        <div class="duo" id="duo">
+          <div class="pane">
+            <div class="pane-tag" id="tag-now" hidden>Now</div>
+            <div class="brain-wrap" id="brain-wrap">
+              <canvas id="brain" aria-label="Brain surface. Drag to rotate, click a spot to inspect it."></canvas>
+              <div class="busy" id="busy" hidden>Simulating…</div>
+              <div class="notice" id="notice" hidden></div>
+            </div>
+          </div>
+          <figure class="pane pinned" id="pinned" hidden>
+            <div class="pane-tag pin">Pinned</div>
+            <div class="pin-img"><img id="pin-img" alt="The brain map as it was when pinned"></div>
+            <figcaption>
+              <div id="pin-what"></div>
+              <div class="pin-diff" id="pin-diff" aria-live="polite"></div>
+              <div class="pin-btns">
+                <button type="button" class="btn" id="pin-view">Same view as pinned</button>
+                <button type="button" class="btn" id="unpin">Unpin</button>
+              </div>
+            </figcaption>
+          </figure>
         </div>
         <div class="brain-foot">
           <div class="caption" id="caption"></div>
+          <button type="button" class="btn" id="pin" title="Keep a picture of this map beside the live one, then change a setting and compare">Pin this map to compare</button>
           <div class="legend" aria-hidden="true">
             <div class="name" id="legend-name"></div>
             <div class="bar" id="legend-bar"></div>
@@ -301,10 +356,15 @@
         <div class="probe-grid">
           <div class="rel" id="dots-box">
             <div class="chart-title">Effect of each feature here</div>
-            <div class="chart-sub">% signal change per unit of the feature</div>
+            <div class="chart-sub"><button type="button" class="term" data-term="psc">% signal change</button> per unit of the feature</div>
             <svg id="dots" width="100%" height="10" role="img" aria-label="Estimated and true effects at the selected spot"></svg>
+            <div class="pin-dots" id="pin-dots" hidden>
+              <div class="chart-title">Pinned</div>
+              <div class="chart-sub" id="pin-dots-sub"></div>
+              <div id="pin-dots-svg"></div>
+            </div>
             <div class="key">
-              <span><i style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></i>Estimate ± 2 SE</span>
+              <span><i style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></i>Estimate ± 2 <button type="button" class="term" data-term="se">SE</button></span>
               <span><i style="width:9px;height:9px;border-radius:50%;border:2px solid var(--truth)"></i>True value</span>
             </div>
           </div>
@@ -333,6 +393,7 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="gloss.js"></script>
 <script src="brain.js"></script>
 <script src="sim.js"></script>
 <script src="data/film-design.js"></script>
@@ -502,6 +563,7 @@ function setView(name) {
   $("caption").textContent = v.caption;
   for (const b of $("views").children) b.setAttribute("aria-pressed", String(b.dataset.view === name));
   updateMarker();
+  updatePinDiff();
   draw();
 }
 
@@ -544,6 +606,7 @@ function setSurface(s) {
   $("surf-pial").setAttribute("aria-pressed", String(s === "pial"));
   recenter();
   updateMarker();
+  updatePinDiff();
   draw();
 }
 
@@ -673,6 +736,7 @@ function recolor() {
   }
   updateLegend(cm, vmax);
   updateReadout(cm, pass, cortexN);
+  updatePinDiff();
   draw();
 }
 
@@ -908,14 +972,16 @@ function peakVertex(id, hemi) {
 const STEPS = [
   {
     title: "Where does brightness go?",
+    uses: ["brain", "probe"],
     set: { map: "brightness", view: "left-medial", vertex: ["brightness", "L"] },
     text: [
-      "Brightness is a <b>parametric regressor</b>: each trial contributes its brightness minus the run's average. The map shows a t statistic at every point: how far the estimated effect sits from zero, in units of its uncertainty.",
+      "Brightness is a <button type=\"button\" class=\"term\" data-term=\"parametric\"><b>parametric regressor</b></button>: each trial contributes its brightness minus the run's average. The map shows a <button type=\"button\" class=\"term\" data-term=\"t\">t statistic</button> at every point: how far the estimated effect sits from zero, in units of its uncertainty.",
       "Look along the calcarine sulcus on the inner surface. This is primary visual cortex (V1). Click a red spot and compare the estimate with the true value below the brain.",
     ],
   },
   {
     title: "Faces in the fusiform",
+    uses: ["mode"],
     set: { map: "faces", view: "ventral", vertex: ["faces", "R"] },
     text: [
       "Seen from below, faces drive the fusiform gyrus. The right hemisphere responds more than the left, as in most people.",
@@ -924,22 +990,25 @@ const STEPS = [
   },
   {
     title: "When features travel together",
+    uses: ["corr", "mode", "model:speech"],
     set: { map: "faces", view: "left-lateral", corr: 0.8, included: ["faces"], vertex: ["speech", "L"] },
     text: [
       "In this experiment, most clips with a face also have someone talking, and the model now includes only <b>Faces</b>. Faces seem to drive the superior temporal sulcus, a speech region.",
-      "Switch to <b>True effect</b>: faces do nothing there. The analysis gave faces the credit for speech because speech was missing from the model. Tick <b>Speech</b> under “The model” and watch the false patch go.",
+      "Switch to <b>True effect</b>: faces do nothing there. The analysis gave faces the credit for speech because speech was missing from the model: an <button type=\"button\" class=\"term\" data-term=\"omitted\">omitted variable</button>. Tick <b>Speech</b> under “The model” and watch the false patch go.",
     ],
   },
   {
     title: "Chance alone",
+    uses: ["thr", "readout"],
     set: { map: "random", view: "left-lateral", thr: 2.0 },
     text: [
       "Nothing in this brain responds to the <b>Random</b> feature, yet at |t| &gt; 2 hundreds of points pass. With {N} points tested, rare events happen often.",
-      "Raise the threshold and compare the count with the chance estimate under the brain. Real studies correct for this with stricter thresholds or cluster statistics.",
+      "Raise the threshold and compare the count with the chance estimate under the brain. Real studies <button type=\"button\" class=\"term\" data-term=\"multiple\">correct for this</button> with stricter thresholds or cluster statistics.",
     ],
   },
   {
     title: "Weak, broad, abstract",
+    uses: ["trials", "noise"],
     set: { map: "social", view: "right-lateral", nTrials: 40, vertex: ["social", "R"] },
     text: [
       "Social interaction drives a weak, spread-out network: the temporo-parietal junction, the precuneus and medial frontal cortex. With 40 trials it barely shows.",
@@ -948,6 +1017,7 @@ const STEPS = [
   },
   {
     title: "A real film: faces and speech",
+    uses: ["stim", "mode", "model:speech"],
     film: true,
     set: { stimulus: "film", map: "faces", view: "left-lateral", included: S.FEATURES.filter((f) => !f.always && f.id !== "speech" && f.id !== "social").map((f) => f.id), vertex: ["speech", "L"] },
     text: [
@@ -957,10 +1027,11 @@ const STEPS = [
   },
   {
     title: "Two names for one thing",
+    uses: ["model:social", "model:speech", "probe"],
     film: true,
     set: { stimulus: "film", map: "speech", view: "left-lateral", vertex: ["speech", "L"] },
     text: [
-      "Every feature is in the model now, and speech fades in its own region. The film's <b>Social interaction</b> is measured as the number of voices talking, from the same who-speaks-when analysis as <b>Speech</b>. So the two rise and fall together (r = {RSS}). The model cannot tell which one the region follows, so both estimates get wide error bars. Click the region and look below the brain.",
+      "Every feature is in the model now, and speech fades in its own region. The film's <b>Social interaction</b> is measured as the number of voices talking, from the same who-speaks-when analysis as <b>Speech</b>. So the two rise and fall together (r = {RSS}). The model cannot tell which one the region follows (<button type=\"button\" class=\"term\" data-term=\"collinear\">collinearity</button>), so both estimates get wide error bars. Click the region and look below the brain.",
       "Untick <b>Social interaction</b>: speech comes back. Then tick it and untick <b>Speech</b> instead: now social interaction takes over speech's map. Real stimuli are full of features like these, and choosing which to put in the model is part of the analysis.",
     ],
   },
@@ -978,9 +1049,37 @@ function applyStep(i) {
   syncControls();
   renderSteps();
   setView(s.view);
+  applyCues();
   if (needSim || !Y) resimulate(); else refit();
 }
 
+// where each step's "uses" points on the page
+const CUE = {
+  brain: () => $("brain-wrap"), probe: () => $("p-probe"), mode: () => $("mode-seg"), stim: () => $("stim-seg"),
+  thr: () => $("ctl-thr"), readout: () => $("readout"), trials: () => $("ctl-trials"), noise: () => $("ctl-noise"),
+  corr: () => $("ctl-corr"),
+};
+function cueTarget(k) {
+  if (k.startsWith("model:")) { const cb = $("m-" + k.slice(6)); return cb && cb.closest("label"); }
+  return CUE[k] ? CUE[k]() : null;
+}
+function applyCues() {
+  for (const e of document.querySelectorAll(".cue")) e.classList.remove("cue");
+  for (const k of STEPS[state.step].uses || []) {
+    const e = cueTarget(k);
+    if (e) { e.classList.remove("cue"); void e.offsetWidth; e.classList.add("cue"); }
+  }
+}
+const visibleSteps = () => STEPS.map((s, i) => i).filter((i) => !(STEPS[i].film && !FILM));
+function stepBy(d) {
+  const v = visibleSteps(), k = v.indexOf(state.step) + d;
+  if (k >= 0 && k < v.length) {
+    applyStep(v[k]);
+    $("p-try").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+
+let lastStepHtml = "";
 function renderSteps() {
   const box = $("steps");
   box.innerHTML = "";
@@ -995,7 +1094,82 @@ function renderSteps() {
   });
   const nCortex = brain.cortex.reduce((a, b) => a + b, 0).toLocaleString();
   const r = (a, b) => (design && design.film ? fmt(S.corr(design.cols[a], design.cols[b]), 2) : "…");
-  $("step-text").innerHTML = STEPS[state.step].text.map((p) => `<p>${p.replace("{N}", nCortex).replace("{RFS}", r("faces", "speech")).replace("{RSS}", r("speech", "social"))}</p>`).join("");
+  const html = STEPS[state.step].text.map((p) => `<p>${p.replace("{N}", nCortex).replace("{RFS}", r("faces", "speech")).replace("{RSS}", r("speech", "social"))}</p>`).join("");
+  // rewrite only when the text changed, so an open "what's this?" note survives a re-run
+  if (html !== lastStepHtml) { $("step-text").innerHTML = html; lastStepHtml = html; }
+  const v = visibleSteps(), k = v.indexOf(state.step);
+  $("step-of").textContent = `Step ${k + 1} of ${v.length}`;
+  $("step-prev").disabled = k <= 0;
+  $("step-next").disabled = k >= v.length - 1;
+}
+
+// ------------------------------------------------------------ pin: a snapshot to compare with
+
+let PIN = null;
+const featList = (ids) => ids.map((id) => S.FEATURE[id].name).join(", ");
+function settingsOf() {
+  return {
+    stimulus: state.stimulus, nTrials: state.nTrials, noise: state.noise, corr: state.corr, seed: state.seed,
+    included: state.included.slice(), map: state.map, mode: state.mode, thr: state.thr, view: state.view, surface: state.surface,
+  };
+}
+function describe(st) {
+  const stim = st.stimulus === "film" ? "the film" : `${st.nTrials} random clips, faces with speech ${Math.round(st.corr * 100)} %`;
+  const shows = st.mode === "truth" ? "true effect" : `estimate, |t| > ${fmt(st.thr)}`;
+  return `<b>${S.FEATURE[st.map].name}</b> · ${shows} · ${stim} · noise ${fmt(st.noise, 2)}`;
+}
+function pinNow() {
+  renderer.render(scene, camera);
+  PIN = {
+    st: settingsOf(), img: canvas.toDataURL("image/png"),
+    quat: rot.quaternion.clone(), zoom, readout: [...$("readout").children].map((e) => e.textContent).join(" "), vertex: state.vertex,
+  };
+  $("pin-img").src = PIN.img;
+  $("pin-what").innerHTML = describe(PIN.st) + `<br>${PIN.readout}`;
+  if (state.vertex != null && fit) {
+    const svg = $("dots").cloneNode(true);
+    svg.removeAttribute("id"); svg.setAttribute("aria-label", "Effects at the inspected spot, when pinned");
+    $("pin-dots-svg").replaceChildren(svg);
+    $("pin-dots-sub").textContent = `${regionName(brain.labels[brain.label[state.vertex]])}, with the settings above`;
+    $("pin-dots").hidden = false;
+  } else $("pin-dots").hidden = true;
+  $("duo").classList.add("on");
+  $("pinned").hidden = false; $("tag-now").hidden = false;
+  $("pin").textContent = "Pin again (replace)";
+  fitCamera(); draw(); updatePinDiff();
+}
+function unpin() {
+  PIN = null;
+  $("duo").classList.remove("on");
+  $("pinned").hidden = true; $("tag-now").hidden = true; $("pin-dots").hidden = true;
+  $("pin").textContent = "Pin this map to compare";
+  fitCamera(); draw();
+}
+function updatePinDiff() {
+  if (!PIN) return;
+  const a = PIN.st, b = settingsOf(), out = [];
+  if (a.map !== b.map) out.push(`Map: ${S.FEATURE[a.map].name} → ${S.FEATURE[b.map].name}`);
+  if (a.mode !== b.mode) out.push(`Showing: ${a.mode === "truth" ? "true effect" : "estimate"} → ${b.mode === "truth" ? "true effect" : "estimate"}`);
+  if (a.thr !== b.thr) out.push(`Threshold: ${fmt(a.thr)} → ${fmt(b.thr)}`);
+  if (a.stimulus !== b.stimulus) out.push(`Stimulus: ${a.stimulus === "film" ? "the film" : "random clips"} → ${b.stimulus === "film" ? "the film" : "random clips"}`);
+  if (a.nTrials !== b.nTrials && b.stimulus === "trials") out.push(`Trials: ${a.nTrials} → ${b.nTrials}`);
+  if (a.noise !== b.noise) out.push(`Noise: ${fmt(a.noise, 2)} → ${fmt(b.noise, 2)}`);
+  if (a.corr !== b.corr && b.stimulus === "trials") out.push(`Faces with speech: ${Math.round(a.corr * 100)} % → ${Math.round(b.corr * 100)} %`);
+  if (a.seed !== b.seed) out.push("A new random experiment");
+  const added = b.included.filter((x) => !a.included.includes(x)), dropped = a.included.filter((x) => !b.included.includes(x));
+  if (added.length) out.push(`Added to the model: ${featList(added)}`);
+  if (dropped.length) out.push(`Left out of the model: ${featList(dropped)}`);
+  if (a.view !== b.view || a.surface !== b.surface) out.push("A different view of the brain");
+  $("pin-diff").innerHTML = out.length
+    ? `Changed since pinning:<ul>${out.map((x) => `<li>${x}</li>`).join("")}</ul>`
+    : `<span class="same">Nothing changed yet. Change a setting and compare the two maps.</span>`;
+}
+function pinView() {
+  if (!PIN) return;
+  if (PIN.st.surface !== state.surface) setSurface(PIN.st.surface);
+  setView(PIN.st.view);
+  rot.quaternion.copy(PIN.quat); zoom = PIN.zoom;
+  fitCamera(); updateMarker(); draw(); updatePinDiff();
 }
 
 // ------------------------------------------------------------ controls
@@ -1061,6 +1235,11 @@ function syncControls() {
   slider("thr", "thr", (x) => fmt(x), () => {});
 
   $("reseed").addEventListener("click", () => { state.seed += 1; resimulate(); });
+  $("pin").addEventListener("click", pinNow);
+  $("unpin").addEventListener("click", unpin);
+  $("pin-view").addEventListener("click", pinView);
+  $("step-prev").addEventListener("click", () => stepBy(-1));
+  $("step-next").addEventListener("click", () => stepBy(1));
   const setStim = (v) => { if (state.stimulus === v) return; state.stimulus = v; syncControls(); resimulate(); };
   $("stim-trials").addEventListener("click", () => setStim("trials"));
   $("stim-film").addEventListener("click", () => setStim("film"));

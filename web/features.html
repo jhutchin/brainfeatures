@@ -171,6 +171,13 @@
   .caption-card { grid-column: 1 / -1; }
   .caption-card .lv { font-size: 1.05rem; }
 
+  /* embeddings: the bridge from hand features */
+  .bridge { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 8px; }
+  .bstep { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; color: var(--ink-2); min-width: 0; }
+  .bstep p { margin: 0 0 6px; }
+  .bstep p:last-child { margin: 0; }
+  .bstep b { color: var(--ink); }
+  .bstep .vec { font-size: 0.8rem; color: var(--ink); overflow-wrap: anywhere; }
   /* embeddings */
   .nn { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   .nn button { width: 56px; height: 56px; border-radius: 4px; border: 2px solid transparent; padding: 0; cursor: pointer; background-repeat: no-repeat; }
@@ -198,6 +205,7 @@
     .two, .two.side { grid-template-columns: minmax(0, 1fr); }
     #mini { max-width: 220px; }
     .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bridge { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 520px) {
     .thumbs { grid-template-columns: repeat(8, minmax(0, 1fr)); }
@@ -213,7 +221,7 @@
       <h1>What a feature is</h1>
       <span class="badge">Real pictures · features you compute</span>
     </div>
-    <p class="lede">A <b>feature</b> is a number computed from a stimulus: how bright a picture is, how loud a sound is, how many faces a photo holds. You'll compute some features yourself in this page, then compare them with features that trained models compute. Neuroscientists use numbers like these to ask which properties of a stimulus a brain region responds to.</p>
+    <p class="lede">A <button type="button" class="term" data-term="feature"><b>feature</b></button> is a number computed from a stimulus: how bright a picture is, how loud a sound is, how many faces a photo holds. You'll compute some features yourself in this page, then compare them with features that trained models compute. Neuroscientists use numbers like these to ask which properties of a stimulus a brain region responds to.</p>
     <nav class="series" aria-label="Pages in this series">
       <span class="current" aria-current="page">1 · What a feature is</span>
       <a href="film.html">2 · Features over time</a>
@@ -311,7 +319,7 @@
   <section class="panel" id="s4" aria-labelledby="h4s">
     <div class="stephead"><span class="n">4</span><div>
       <h2 id="h4s">Features a model has to learn</h2>
-      <p>Nobody can write a short recipe for "is there a face?" or "what kind of place is this?". Instead, a neural network is trained on many labelled examples until it gives the right answers. Then it can score new pictures. These numbers were computed in advance by the open-source package viz2psy, for the picture you picked in step 1.</p>
+      <p>Nobody can write a short recipe for "is there a face?" or "what kind of place is this?". Instead, a <button type="button" class="term" data-term="model">neural network</button> is trained on many labelled examples until it gives the right answers. Then it can score new pictures. These numbers were computed in advance by the open-source package viz2psy, for the picture you picked in step 1.</p>
     </div></div>
     <div class="two side">
       <div><canvas id="mini" width="220" height="220" style="width:100%;height:auto;border-radius:6px;background:var(--grid)" aria-label="The picked picture"></canvas>
@@ -325,8 +333,19 @@
   <section class="panel" id="s5" aria-labelledby="h5s">
     <div class="stephead"><span class="n">5</span><div>
       <h2 id="h5s">Hundreds of numbers at once: compare instead of reading</h2>
-      <p>Some models describe a picture with hundreds of numbers (an <b>embedding</b>). None of the numbers means much alone. What does carry meaning is <b>which pictures get similar numbers</b>. So we compare every picture with every other: a 100 × 100 table of dissimilarities, and a map that places similar pictures close together.</p>
+      <p>Your four features from step 1 already describe each picture with a short list of numbers. A model can describe it with hundreds: an <button type="button" class="term" data-term="embedding"><b>embedding</b></button>. Too many to plot on two axes, so this step compares pictures instead of reading numbers.</p>
     </div></div>
+    <div class="bridge" aria-label="From four features to an embedding">
+      <div class="bstep"><p class="sub">Your features (step 1)</p>
+        <p><b>4 numbers</b> per picture. Each has a name and a recipe you can check: brightness, contrast, colourfulness, edge density.</p>
+        <p class="mono vec" id="vec-hand">–</p></div>
+      <div class="bstep"><p class="sub">An embedding (this step)</p>
+        <p><b>Hundreds of numbers</b> per picture, learned by a model from millions of examples. No number has a name or a recipe, so no single one can be read.</p>
+        <p class="mono vec">x₁, x₂, x₃, … x₇₆₈ (DINOv2)</p></div>
+      <div class="bstep"><p class="sub">So: compare, don't read</p>
+        <p>What carries meaning is <b>which pictures get similar lists</b>. Every picture is compared with every other: a 100 × 100 <button type="button" class="term" data-term="rdm">table of dissimilarities</button>, and a <button type="button" class="term" data-term="mds">map</button> that places similar pictures close together.</p></div>
+    </div>
+    <p class="hint" style="margin:0 0 12px">The first bar in the chart below does the same comparison with your four features, so you can see what the learned numbers add.</p>
     <div class="seg" role="group" aria-label="Description" id="spaces" style="margin-bottom:6px"></div>
     <p class="hint" id="spacewhat" style="margin:0 0 10px"></p>
     <div class="two">
@@ -375,6 +394,7 @@
 
 <div class="tip" id="tip" hidden></div>
 
+<script src="gloss.js"></script>
 <script src="hand.js"></script>
 <script src="data/features1.js"></script>
 <script>
@@ -503,7 +523,8 @@ function showHand() {
     $("v-" + h.k).textContent = Number.isFinite(v[h.k]) ? h.fmt(v[h.k]) : "undefined";
     const ref = it.hand[h.k];
     $("c-" + h.k).textContent = ref === null ? "pipeline: undefined" : `pipeline: ${h.fmt(ref)}`;
-  }
+  }  // step 5's bridge: the same four values, as one list
+  $("vec-hand").textContent = "Your picture: " + HAND_INFO.map((h) => Number.isFinite(v[h.k]) ? h.fmt(v[h.k]) : "–").join(", ");
 }
 
 function setView(v) {
@@ -893,7 +914,7 @@ function setSpace(key) {
     "These numbers come from the caption text alone, not the pixels. Words carry most of the category too: a caption says “a man” or “a mountain”.",
     "A different text model, trained on pairs of related sentences, run on the same captions. Category structure appears again, and the nearest-neighbour score is a little lower than with CLIP's text encoder.",
   ];
-  $("s5note").innerHTML = `<p>${notes[order]}</p><p><b>Why this matters for the brain:</b> a brain region also gives each picture a pattern of activity, so it has a dissimilarity table of its own. Comparing a region's table with a model's tells you which model describes that region best (representational similarity analysis, RSA). Page 3 will let you try that on a simulated brain.</p>`;
+  $("s5note").innerHTML = `<p>${notes[order]}</p><p><b>Why this matters for the brain:</b> a brain region also gives each picture a pattern of activity, so it has a dissimilarity table of its own. Comparing a region's table with a model's tells you which model describes that region best (<button type="button" class="term" data-term="rsa">representational similarity analysis, RSA</button>). A later module of page 3, <i>Comparing representations</i>, will let you try that on a simulated brain.</p>`;
   drawMap(); drawRdm(); showNeighbours();
 }
 
